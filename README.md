@@ -43,6 +43,7 @@ docker build -t week8-team2-network .
 docker run --rm -p 8080:8080 week8-team2-network
 ```
 
+
 Or:
 
 ```bash
@@ -53,10 +54,16 @@ docker compose up --build
 
 ### Request
 
+삽입
 ```bash
 curl -X POST http://localhost:8080/query \
   -H "Content-Type: text/plain" \
   --data "INSERT INTO users VALUES ('Alice', 20);"
+```
+
+조회
+```bash
+curl -v -X POST http://localhost:8080/query -H "Content-Type: text/plain" --data-raw "SELECT * FROM users;"
 ```
 
 ### Supported SQL
