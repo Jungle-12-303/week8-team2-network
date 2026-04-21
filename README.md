@@ -43,7 +43,6 @@ docker build -t week8-team2-network .
 docker run --rm -p 8080:8080 week8-team2-network
 ```
 
-
 Or:
 
 ```bash
