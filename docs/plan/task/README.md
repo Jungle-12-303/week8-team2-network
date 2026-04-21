@@ -10,6 +10,9 @@ This folder is for task cards that break implementation work into small, actiona
 - Keep cards small
 - Prefer titles that end with `~함`
 - Always include completion criteria and validation steps
+- Always include the responsible persona and touched files
+- Always write the immediate predecessor and successor tasks
+- If a card crosses persona boundaries, write the interface explicitly
 - Do not mix implementation, testing, and docs work in one card unless the card is intentionally small
 
 ## Recommended Template
@@ -39,6 +42,7 @@ Split a card further if any of these apply:
 - Someone else could work on it in parallel
 - It mixes implementation and refactoring
 - It also includes documentation changes
+- It touches more than one persona without a clear interface
 
 ## Workflow
 

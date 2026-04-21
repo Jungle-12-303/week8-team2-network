@@ -22,6 +22,8 @@ docs/
     07-test-and-quality-plan.md
     08-demo-and-readme-plan.md
     09-plan-and-task-management-guide.md
+    10-multi-persona-execution-guide.md
+    11-implementation-policies.md
     task/
       README.md
       template.md
@@ -122,6 +124,8 @@ If we want to split implementation across multiple Codex personas, use the opera
 That guide defines the recommended persona count, ownership rules, and handoff behavior.
 
 Detailed persona responsibilities live in [`personas/README.md`](personas/README.md).
+
+Implementation policies, including socket I/O, SQL error mapping, shutdown, queue behavior, and build rules, live in [`11-implementation-policies.md`](11-implementation-policies.md).
 
 ## Bottom Line
 

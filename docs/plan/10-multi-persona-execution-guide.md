@@ -234,6 +234,8 @@
 
 세부 역할, 소유권 표, 인수인계 규칙은 그 폴더를 기준으로 보시면 됩니다.
 
+페르소나 간 입력/출력 형식은 [`personas/09-persona-interface-contract.md`](personas/09-persona-interface-contract.md)를 기준으로 봅니다.
+
 ## 하면 안 되는 것
 
 - 여러 페르소나가 같은 계약 파일을 동시에 고치는 것

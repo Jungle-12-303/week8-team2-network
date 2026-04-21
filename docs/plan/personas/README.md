@@ -25,6 +25,7 @@ docs/plan/personas/
   06-docs-demo.md
   07-handoff-and-merge.md
   08-ownership-matrix.md
+  09-persona-interface-contract.md
 ```
 
 ## 사용 원칙
@@ -34,3 +35,4 @@ docs/plan/personas/
 - 구현 전에 계약을 먼저 고정한다
 - 카드 단위로 작업한다
 - 완료 후에는 반드시 handoff note를 남긴다
+- 페르소나 간 데이터 형식은 [`09-persona-interface-contract.md`](09-persona-interface-contract.md)를 따른다
