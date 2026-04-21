@@ -1,266 +1,269 @@
-# 10. Multi Persona Execution Guide
+# 10. 멀티 페르소나 실행 가이드
 
-## Why We Need This
+## 왜 필요한가
 
-If we want to implement the plan folder in parallel, one agent thread is usually not enough.
+`plan` 폴더의 내용을 병렬로 구현하려면 한 명의 에이전트만으로는 부족할 때가 많습니다.
 
-The best pattern for this repo is not "many agents doing the same thing".
-It is "a small set of specialized personas with clear ownership and one integrator keeping the system coherent".
+이 저장소에 가장 잘 맞는 방식은 "여러 에이전트가 같은 일을 나눠 하는 것"이 아니라,
+"작은 수의 전문 페르소나가 각자 책임을 지고, 한 명의 통합자가 전체 흐름을 맞추는 것"입니다.
 
-## Recommended Persona Count
+## 권장 페르소나 수
 
-For this project, the sweet spot is:
+이 프로젝트에는 다음 구성이 가장 적절합니다.
 
-- 1 coordinator persona
-- 5 execution personas
+- 코디네이터 1명
+- 실행 페르소나 5명
 
-So, 6 total personas is a good target.
+즉, 총 6명이 가장 균형이 좋습니다.
 
-If the work is small, use fewer.
-If the scope grows a lot, you can temporarily split one persona into two, but do that only when the ownership boundaries are clear.
+작업량이 적으면 더 적게 써도 됩니다.
+반대로 범위가 커지면 하나의 페르소나를 둘로 나눌 수 있지만, 그때도 책임 경계가 분명해야 합니다.
 
-## Recommended Personas
+## 권장 페르소나
 
-### 1. Coordinator / Integrator
+### 1. 코디네이터 / 통합자
 
-This is the control plane.
+이 페르소나는 전체 제어판입니다.
 
-Personality:
+성격:
 
-- Calm
-- Strict about interfaces
-- Good at sequencing work
-- Good at conflict resolution
+- 차분함
+- 인터페이스에 엄격함
+- 순서 정리에 능함
+- 충돌 해결에 강함
 
-Responsibilities:
+책임:
 
-- Own the single source of truth
-- Assign task cards
-- Prevent file overlap
-- Merge outputs from other personas
-- Resolve interface conflicts
-- Keep the plan updated
+- 단일 기준 문서 유지
+- 작업 카드 배분
+- 파일 충돌 방지
+- 다른 페르소나의 결과 통합
+- 인터페이스 충돌 해결
+- plan 최신화
 
-This persona should not be the main writer for feature code unless it is also filling a gap temporarily.
+이 페르소나는 기능 코드의 주 작성자가 되기보다, 필요할 때만 빈 부분을 메우는 쪽이 좋습니다.
 
-### 2. HTTP / API Persona
+### 2. HTTP / API 페르소나
 
-This persona owns request/response behavior.
+이 페르소나는 요청과 응답의 행동을 담당합니다.
 
-Personality:
+성격:
 
-- Precise
-- Contract-focused
-- Defensive about edge cases
+- 정확함
+- 계약 중심
+- 엣지 케이스에 민감함
 
-Responsibilities:
+책임:
 
-- HTTP parsing
-- Route handling
-- Status codes
-- Response format
-- Error mapping at the API boundary
+- HTTP 파싱
+- 라우팅 처리
+- 상태 코드 처리
+- 응답 형식 정리
+- API 경계의 오류 매핑
 
-Best when working on:
+주로 맡기 좋은 작업 카드:
 
-- `docs/plan/task/0005-http-request-parser.md`
-- `docs/plan/task/0006-route-and-response-contract.md`
-- part of `docs/plan/task/0014-error-message-standardization.md`
+- [`0005-http-request-parser.md`](task/0005-http-request-parser.md)
+- [`0006-route-and-response-contract.md`](task/0006-route-and-response-contract.md)
+- [`0014-error-message-standardization.md`](task/0014-error-message-standardization.md)의 일부
 
-### 3. DB / SQL Persona
+### 3. DB / SQL 페르소나
 
-This persona owns the bridge to the existing SQL engine.
+이 페르소나는 기존 SQL 엔진과 API 서버를 연결하는 다리 역할을 합니다.
 
-Personality:
+성격:
 
-- Careful
-- Interface-driven
-- Low tolerance for breaking existing behavior
+- 조심스러움
+- 인터페이스 지향적
+- 기존 동작을 깨는 것을 싫어함
 
-Responsibilities:
+책임:
 
-- `sql_execute()` integration
-- Result mapping
-- SQL error handling
-- INSERT/SELECT contract clarity
+- `sql_execute()` 연결
+- 결과 매핑
+- SQL 오류 처리
+- INSERT / SELECT 계약 정리
 
-Best when working on:
+주로 맡기 좋은 작업 카드:
 
-- `docs/plan/task/0007-sql-execution-adapter.md`
-- part of `docs/plan/task/0014-error-message-standardization.md`
+- [`0007-sql-execution-adapter.md`](task/0007-sql-execution-adapter.md)
+- [`0014-error-message-standardization.md`](task/0014-error-message-standardization.md)의 일부
 
-### 4. Concurrency / Runtime Persona
+### 4. 동시성 / 런타임 페르소나
 
-This persona owns runtime behavior under load.
+이 페르소나는 부하가 걸렸을 때의 동작을 담당합니다.
 
-Personality:
+성격:
 
-- Systems-minded
-- Paranoid in a good way
-- Obsessed with shutdown and locking correctness
+- 시스템적임
+- 좋은 의미의 의심이 많음
+- 종료와 잠금에 집착함
 
-Responsibilities:
+책임:
 
-- Thread pool
-- Job queue
-- Locking
-- Graceful shutdown
-- Queue full behavior
+- thread pool
+- 작업 큐
+- 잠금 처리
+- graceful shutdown
+- queue full 처리
 
-Best when working on:
+주로 맡기 좋은 작업 카드:
 
-- `docs/plan/task/0008-thread-pool-and-job-queue.md`
-- `docs/plan/task/0009-database-locking-and-shutdown.md`
-- part of `docs/plan/task/0012-concurrency-test-scenarios.md`
+- [`0008-thread-pool-and-job-queue.md`](task/0008-thread-pool-and-job-queue.md)
+- [`0009-database-locking-and-shutdown.md`](task/0009-database-locking-and-shutdown.md)
+- [`0012-concurrency-test-scenarios.md`](task/0012-concurrency-test-scenarios.md)의 일부
 
-### 5. Testing / QA Persona
+### 5. 테스트 / QA 페르소나
 
-This persona proves the system works.
+이 페르소나는 시스템이 실제로 동작하는지 증명합니다.
 
-Personality:
+성격:
 
-- Skeptical
-- Methodical
-- Good at finding missing cases
+- 의심이 많음
+- 체계적임
+- 빠진 케이스를 잘 찾음
 
-Responsibilities:
+책임:
 
-- Unit test planning
-- API scenario planning
-- Concurrency scenario planning
-- Regression checks
-- Validation against expected output
+- 단위 테스트 계획
+- API 시나리오 계획
+- 동시성 시나리오 계획
+- 회귀 확인
+- 기대 출력 검증
 
-Best when working on:
+주로 맡기 좋은 작업 카드:
 
-- `docs/plan/task/0010-unit-test-cases.md`
-- `docs/plan/task/0011-api-test-scenarios.md`
-- `docs/plan/task/0012-concurrency-test-scenarios.md`
-- `docs/plan/task/0015-validation-and-observed-output.md`
+- [`0001-audit-existing-test-plan.md`](task/0001-audit-existing-test-plan.md)
+- [`0010-unit-test-cases.md`](task/0010-unit-test-cases.md)
+- [`0011-api-test-scenarios.md`](task/0011-api-test-scenarios.md)
+- [`0012-concurrency-test-scenarios.md`](task/0012-concurrency-test-scenarios.md)
+- [`0015-validation-and-observed-output.md`](task/0015-validation-and-observed-output.md)
 
-### 6. Docs / Demo Persona
+### 6. 문서 / 데모 페르소나
 
-This persona makes the work visible.
+이 페르소나는 구현 결과를 밖에서 보이게 만듭니다.
 
-Personality:
+성격:
 
-- Clear
-- Concise
-- User-facing
+- 명확함
+- 간결함
+- 사용자 관점이 강함
 
-Responsibilities:
+책임:
 
-- README updates
-- Demo flow
-- Example commands
-- Result summaries
+- README 갱신
+- 데모 흐름 정리
+- 실행 예시 정리
+- 결과 요약
 
-Best when working on:
+주로 맡기 좋은 작업 카드:
 
-- `docs/plan/task/0013-demo-and-readme-checklist.md`
-- parts of `docs/plan/task/0015-validation-and-observed-output.md`
+- [`0013-demo-and-readme-checklist.md`](task/0013-demo-and-readme-checklist.md)
+- [`0015-validation-and-observed-output.md`](task/0015-validation-and-observed-output.md)의 일부
 
-## How They Should Work Together
+## 함께 일하는 방법
 
-### Rule 1. One Owner Per File
+### 규칙 1. 한 파일은 한 명이 책임진다
 
-No two personas should edit the same file at the same time.
+두 페르소나가 같은 파일을 동시에 수정하면 안 됩니다.
 
-If two personas need the same area, the coordinator must split the file or sequence the work.
+같은 영역이 필요하다면 코디네이터가 파일을 나누거나 작업 순서를 정해야 합니다.
 
-### Rule 2. Shared Contract First
+### 규칙 2. 계약을 먼저 고정한다
 
-Before implementation starts, the coordinator should lock:
+구현 전에 코디네이터가 다음 항목을 먼저 고정해야 합니다.
 
-- API shape
-- Error codes
-- Result format
-- Queue behavior
-- Shutdown behavior
+- API 형식
+- 오류 코드
+- 결과 형식
+- 큐 동작
+- 종료 동작
 
-That prevents parallel work from drifting apart.
+이렇게 해야 병렬 작업이 서로 어긋나지 않습니다.
 
-### Rule 3. Use Task Cards As The Boundary
+### 규칙 3. 작업 카드를 경계로 쓴다
 
-Each persona should receive task cards, not vague goals.
+각 페르소나는 막연한 목표가 아니라 작업 카드를 받아야 합니다.
 
-The card should include:
+카드에는 다음이 들어가야 합니다.
 
-- Purpose
-- Scope
-- Done criteria
-- Validation steps
-- Dependencies
+- 목적
+- 범위
+- 완료 기준
+- 검증 방법
+- 의존성
 
-### Rule 4. Handoffs Must Be Written
+### 규칙 4. 인수인계는 반드시 남긴다
 
-Every persona should leave a short handoff note:
+각 페르소나는 작업 후 짧은 인수인계 메모를 남겨야 합니다.
 
-- What changed
-- What remains
-- What assumptions were made
-- What the next persona should not break
+메모에는 다음을 적습니다.
 
-### Rule 5. QA Runs Against Finished Interfaces
+- 무엇을 바꿨는지
+- 무엇이 남았는지
+- 어떤 가정을 했는지
+- 다음 사람이 건드리면 안 되는 부분이 무엇인지
 
-Testing can start early, but the QA persona should prefer stable contracts.
+### 규칙 5. QA는 안정된 인터페이스 위에서 검증한다
 
-Good pattern:
+테스트는 일찍 시작할 수 있지만, QA 페르소나는 가능한 한 안정된 계약 위에서 검증하는 것이 좋습니다.
 
-- API persona defines contract
-- DB and concurrency personas implement the internals
-- QA persona validates the contract and catches regressions
+좋은 흐름은 다음과 같습니다.
 
-## Parallel Execution Model
+- API 페르소나가 계약을 정의한다
+- DB와 동시성 페르소나가 내부 동작을 구현한다
+- QA 페르소나가 계약과 회귀를 검증한다
 
-The best parallel pattern for this repo is:
+## 병렬 실행 모델
 
-1. Coordinator creates the task split
-2. API persona works on request/response
-3. DB persona works on SQL integration
-4. Concurrency persona works on runtime structure
-5. Testing persona prepares and validates test cases
-6. Docs persona prepares README and demo material
-7. Coordinator merges and resolves any conflicts
+이 저장소에 가장 잘 맞는 병렬 패턴은 다음과 같습니다.
 
-This works because the file ownership is naturally different.
+1. 코디네이터가 작업을 나눈다
+2. API 페르소나가 요청과 응답을 다룬다
+3. DB 페르소나가 SQL 연동을 다룬다
+4. 동시성 페르소나가 런타임 구조를 다룬다
+5. 테스트 페르소나가 테스트 시나리오를 준비하고 검증한다
+6. 문서 페르소나가 README와 데모를 준비한다
+7. 코디네이터가 결과를 통합하고 충돌을 해결한다
 
-## Persona Docs
+이 방식이 가능한 이유는 파일 책임이 자연스럽게 나뉘기 때문입니다.
 
-Each persona has a dedicated guide in [`personas/README.md`](personas/README.md).
+## 페르소나 문서
 
-Use that folder for the detailed operating rules, ownership matrix, and handoff protocol.
+각 페르소나의 세부 운영 규칙은 [`personas/README.md`](personas/README.md)에 있습니다.
 
-## What Not To Do
+세부 역할, 소유권 표, 인수인계 규칙은 그 폴더를 기준으로 보시면 됩니다.
 
-- Do not let multiple personas rewrite the same contract file
-- Do not start implementation before the API and error format are agreed
-- Do not let QA become the only place where requirements are discovered
-- Do not have the coordinator act as a bottleneck for every tiny change
-- Do not create more personas than the project can actually feed
+## 하면 안 되는 것
 
-## My Recommendation For This Repo
+- 여러 페르소나가 같은 계약 파일을 동시에 고치는 것
+- API와 오류 형식이 정해지기 전에 구현을 시작하는 것
+- QA가 요구사항을 뒤늦게 발견하는 유일한 단계가 되는 것
+- 코디네이터가 사소한 변경마다 병목이 되는 것
+- 프로젝트가 감당할 수 있는 수보다 많은 페르소나를 만드는 것
 
-Start with 6 personas total.
+## 이 저장소에 대한 추천
 
-If you want a simpler setup, collapse them to 4:
+기본적으로 6명 구성이 가장 좋습니다.
 
-- Coordinator / Integrator
-- API + Docs
-- DB + Concurrency
-- Testing / QA
+더 단순하게 가고 싶다면 4명으로 줄일 수 있습니다.
 
-But if you want the cleanest parallel flow, 6 is better for this codebase because:
+- 코디네이터 / 통합자
+- API + 문서
+- DB + 동시성
+- 테스트 / QA
 
-- API work is distinct from DB work
-- concurrency has enough complexity to deserve a separate owner
-- tests and docs are both important enough to be separate
+하지만 이 코드베이스에서는 다음 이유로 6명이 더 낫습니다.
 
-## Bottom Line
+- API 작업과 DB 작업의 성격이 다릅니다
+- 동시성은 따로 다뤄야 할 만큼 복잡합니다
+- 테스트와 문서도 둘 다 중요합니다
 
-For this project, the optimal setup is:
+## 결론
 
-- 1 coordinator
-- 5 specialist personas
+이 프로젝트의 최적 구성이란 다음과 같습니다.
 
-That gives us enough parallelism without turning coordination into overhead.
+- 코디네이터 1명
+- 전문 페르소나 5명
+
+이렇게 하면 조율 비용을 너무 키우지 않으면서도 병렬성을 확보할 수 있습니다.
