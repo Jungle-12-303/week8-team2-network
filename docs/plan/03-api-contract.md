@@ -106,6 +106,31 @@ SELECT * FROM users WHERE age > 20;
 - keep-alive는 지원하지 않고 요청 하나 처리 후 연결을 닫습니다.
 - 응답에는 `Connection: close`를 포함합니다.
 
+## HTTP 파싱 규칙
+
+응답 계약만큼 중요한 것이 요청 읽기 규칙입니다.
+
+- request line은 method, path, version 순서로 읽습니다.
+- header는 빈 줄 전까지 읽습니다.
+- `Content-Length`는 body 길이의 기준으로만 사용합니다.
+- body가 한 번의 `recv()`로 다 오지 않을 수 있으므로, 누적 읽기로 끝까지 채웁니다.
+- `fdopen()` 같은 FILE stream은 쓰지 않고 socket fd 기준으로 끝까지 읽는 방식을 우선합니다.
+- 요청이 잘렸거나 body 길이가 모자라면 `400 Bad Request`로 처리합니다.
+
+## 요청 오류 기준
+
+- method가 `POST`가 아니면 `405 Method Not Allowed`
+- path가 `/query`가 아니면 `404 Not Found`
+- `Content-Length`가 없거나 잘못되면 `400 Bad Request`
+- body를 끝까지 읽지 못하면 `400 Bad Request`
+- body가 너무 크면 `413 Payload Too Large`
+
+## 구현 메모
+
+- MVP에서는 `text/plain` SQL body를 기본으로 둡니다.
+- JSON body는 확장 후보로만 남기고, 지금 구현 범위에서는 기본 경로로 쓰지 않습니다.
+- 요청 파서와 SQL 실행 코드는 분리해서 유지합니다.
+
 ## curl 데모 예시
 
 ```bash

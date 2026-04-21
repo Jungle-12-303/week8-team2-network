@@ -61,6 +61,8 @@ curl -X POST http://localhost:8080/query \
 - body가 없는 `POST /query`는 `400 Bad Request`.
 - `Content-Length`가 너무 크면 `413 Payload Too Large`.
 - malformed request line은 `400 Bad Request`.
+- 요청이 중간에 끊긴 경우도 `400 Bad Request`로 확인합니다.
+- `Content-Length`와 실제 body 길이가 맞지 않는 경우를 별도로 검증합니다.
 
 ## 동시성 테스트
 
@@ -78,6 +80,8 @@ seq 1 20 | xargs -n1 -P8 -I{} curl -s -X POST http://localhost:8080/query \
 - 응답이 모두 반환됩니다.
 - 이후 `SELECT * FROM users;`에서 insert된 row들이 조회됩니다.
 - id가 중복되거나 깨지지 않습니다.
+- queue full 상황에서 `503`이 나오는지 확인합니다.
+- 종료 신호 이후 새 요청을 받지 않는지 확인합니다.
 
 ## 품질 기준
 
@@ -86,6 +90,8 @@ seq 1 20 | xargs -n1 -P8 -I{} curl -s -X POST http://localhost:8080/query \
 - socket fd는 모든 경로에서 닫습니다.
 - `SQLResult`는 모든 경로에서 정리합니다.
 - worker thread가 queue mutex를 잡은 채로 오래 걸리는 작업을 하지 않습니다.
+- JSON 직렬화 실패 경로도 확인합니다.
+- graceful shutdown 시 hang이 없는지 확인합니다.
 
 ## 발표 전 체크리스트
 

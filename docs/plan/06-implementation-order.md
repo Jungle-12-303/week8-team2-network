@@ -25,6 +25,8 @@
 - header를 빈 줄까지 읽습니다.
 - `Content-Length`를 확인해 body를 읽습니다.
 - `POST /query` 외 요청은 적절한 HTTP 오류로 응답합니다.
+- body는 한 번의 recv로 끝나지 않을 수 있으므로 누적 읽기를 전제로 합니다.
+- 잘못 끊긴 요청과 잘못된 길이 값은 같은 계열의 400 오류로 묶습니다.
 
 ## 4. SQL 엔진 연결
 
@@ -39,6 +41,7 @@
 - SELECT rows JSON을 만듭니다.
 - SQL 오류 JSON을 만듭니다.
 - 모든 HTTP 응답에 `Content-Length`, `Content-Type`, `Connection: close`를 포함합니다.
+- JSON 직렬화 실패와 메모리 할당 실패도 별도 오류 경로로 둡니다.
 
 ## 6. 스레드 풀 도입
 
@@ -46,12 +49,16 @@
 - accept loop는 client fd를 job queue에 넣습니다.
 - worker는 queue에서 fd를 꺼내 기존 request handler를 호출합니다.
 - queue full 상황에는 `503 Service Unavailable`을 반환합니다.
+- queue full 응답은 accept loop에서 즉시 처리할 수 있어야 합니다.
+- worker 종료 조건과 sentinel 처리를 이 단계에서 함께 설계합니다.
 
 ## 7. 동시성 보호
 
 - 전역 또는 server context 안에 `pthread_mutex_t db_mutex`를 둡니다.
 - `sql_execute()`와 결과 JSON 변환을 같은 DB lock 안에서 수행합니다.
 - 응답 문자열을 만든 뒤 lock을 해제하고 socket write를 수행합니다.
+- 종료 시에는 새 요청 수락을 중단하고, 대기 중인 작업을 정리합니다.
+- deadlock 방지를 위해 lock 획득 순서는 문서로 고정합니다.
 
 ## 8. 테스트 보강
 

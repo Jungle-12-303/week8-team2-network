@@ -98,6 +98,8 @@ seq 1 20 | xargs -n1 -P8 -I{} curl -s -X POST http://localhost:8080/query \
 3. “worker는 HTTP body에서 SQL을 꺼내 `sql_execute()`로 넘깁니다.”
 4. “기존 Table과 B+Tree는 공유 자료구조이므로 DB mutex로 보호했습니다.”
 5. “테스트는 기존 SQL 단위 테스트, API curl 테스트, 동시 요청 테스트로 나눴습니다.”
+6. “HTTP 파싱 오류와 SQL 실행 오류는 서로 다른 응답 규칙을 씁니다.”
+7. “queue full과 graceful shutdown도 동시성 설계의 일부입니다.”
 
 ## 개선 방향
 

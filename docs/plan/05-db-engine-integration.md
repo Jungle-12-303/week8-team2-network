@@ -58,12 +58,47 @@ table_destroy(shared_table);
 - `SQL_STATUS_ERROR`: 서버 내부 오류로 처리.
 - `SQL_STATUS_EXIT`: API에서는 종료 명령으로 사용하지 않습니다. `EXIT`, `QUIT` 요청은 오류 또는 no-op로 처리합니다.
 
+## SQL 오류 매핑 원칙
+
+review에서 가장 위험하게 지적된 부분이 바로 이 매핑입니다. 그래서 규칙을 더 분명히 둡니다.
+
+- SQL 엔진이 이미 `status`, `error_code`, `message`를 주면 그대로 활용합니다.
+- `sql_processor`가 error state를 더 주는 경우에는 adapter에서 JSON 필드로 보강합니다.
+- 엔진이 세부 정보를 주지 못하면 최소한 `status`와 `message`는 유지합니다.
+- SQL 오류는 HTTP 파싱 오류와 다르게 처리합니다. SQL은 `200 OK` + JSON 실패 응답이 기본입니다.
+- request 자체가 잘못된 경우에만 HTTP status로 실패를 표현합니다.
+
+권장 응답 형태:
+
+```json
+{
+  "ok": false,
+  "status": "syntax_error",
+  "error_code": 1064,
+  "sql_state": "42000",
+  "message": "ERROR 1064 (42000): ..."
+}
+```
+
+만약 기존 엔진의 필드명이 다르면:
+
+- API 계층에 thin adapter를 둔다
+- `sql_processor` 내부 구조는 가능하면 건드리지 않는다
+- 부족한 정보만 보강한다
+
 ## 메모리 관리
 
 - `sql_execute()`가 반환한 `SQLResult`는 사용 후 반드시 `sql_result_destroy()`로 정리합니다.
 - SELECT 결과의 `records` 배열은 `SQLResult`가 소유하지만, 각 `Record` 자체는 `Table`이 소유합니다.
 - 응답 문자열을 완성한 뒤 `sql_result_destroy()`를 호출합니다.
 - 응답 쓰기는 이미 완성된 문자열을 사용하므로 DB lock 밖에서 수행해도 됩니다.
+
+## 응답 생성 책임
+
+- SQL 결과 직렬화는 API 계층의 책임입니다.
+- SQL 엔진은 row와 실행 상태를 제공하고, HTTP layer가 JSON 포맷을 만든다.
+- 긴 결과 집합은 `sprintf` 남발보다 크기 계산 후 한 번에 할당하는 방식을 우선합니다.
+- 메모리 실패 경로에서는 500 계열 오류 응답으로 빠져야 합니다.
 
 ## 기존 코드 보존 원칙
 

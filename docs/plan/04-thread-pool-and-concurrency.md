@@ -44,6 +44,29 @@ worker thread
 - enqueue/dequeue는 queue mutex 안에서만 수행합니다.
 - queue가 가득 차면 MVP에서는 해당 연결에 `503 Service Unavailable`을 보내고 닫습니다.
 
+## Queue Full 처리 규칙
+
+- accept loop는 queue 상태를 먼저 확인합니다.
+- enqueue가 실패하면 응답을 만들고 바로 연결을 닫습니다.
+- `503 Service Unavailable`은 서버가 살아 있지만 작업을 더 받을 수 없을 때만 사용합니다.
+- 503 응답 생성 로직은 request handler와 따로 두지 말고, 공통 helper로 빼는 편이 좋습니다.
+
+## Worker 종료 규칙
+
+Graceful shutdown은 MVP에서도 문서상 정의가 필요합니다.
+
+- main thread가 종료 신호를 받으면 새 accept를 멈춥니다.
+- 대기 중인 worker를 깨울 방법을 정합니다.
+- worker는 종료 플래그를 확인한 뒤 안전하게 루프를 나갑니다.
+- 종료 중에는 queue에 남은 job을 처리할지, 버릴지 정책을 명확히 합니다.
+
+권장 방식:
+
+- 새 요청은 받지 않는다
+- 큐에 이미 들어간 job은 가능한 만큼 처리한다
+- worker는 sentinel job 또는 종료 플래그로 빠져나간다
+- `pthread_join()`으로 정리한다
+
 ## DB 동시성 정책
 
 기존 `Table`, `BPTree`, `Record` 구조는 thread-safe하게 설계되어 있지 않습니다. 따라서 SQL 실행 구간 전체를 하나의 DB mutex로 보호합니다.
@@ -65,6 +88,13 @@ pthread_mutex_unlock(&db_mutex)
 - `sql_execute()` 호출: DB lock 필요.
 - `SQLResult`를 JSON 문자열로 변환: DB lock 필요.
 - client socket에 응답 쓰기: DB lock 불필요. 단, 응답 문자열을 먼저 완성한 뒤 lock을 해제합니다.
+
+## 메모리와 잠금 순서
+
+- DB lock 안에서는 가능한 한 짧게만 머무릅니다.
+- 다만 MVP에서는 `SQLResult`와 row 포인터 안정성을 위해 직렬화까지 같은 구간에서 처리합니다.
+- 응답 문자열을 완성한 뒤에만 socket write를 수행합니다.
+- 메모리 해제는 누락 경로가 없도록 helper 함수로 모읍니다.
 
 ## 확장 후보
 
