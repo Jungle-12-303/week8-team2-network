@@ -1,0 +1,5 @@
+db_server
+*.o
+sql_processor/*.o
+server/*.o
+.DS_Store
