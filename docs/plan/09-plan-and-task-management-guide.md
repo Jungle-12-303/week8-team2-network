@@ -24,6 +24,7 @@ docs/
     09-plan-and-task-management-guide.md
     10-multi-persona-execution-guide.md
     11-implementation-policies.md
+    12-graceful-shutdown-strategy.md
     task/
       README.md
       template.md
@@ -126,6 +127,8 @@ That guide defines the recommended persona count, ownership rules, and handoff b
 Detailed persona responsibilities live in [`personas/README.md`](personas/README.md).
 
 Implementation policies, including socket I/O, SQL error mapping, shutdown, queue behavior, and build rules, live in [`11-implementation-policies.md`](11-implementation-policies.md).
+
+Graceful shutdown choices are compared in [`12-graceful-shutdown-strategy.md`](12-graceful-shutdown-strategy.md).
 
 ## Bottom Line
 

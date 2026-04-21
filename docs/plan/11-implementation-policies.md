@@ -32,10 +32,10 @@
 
 ## 종료 정책
 
-- graceful shutdown을 기본으로 둔다
+- graceful shutdown의 상세 방식은 [`12-graceful-shutdown-strategy.md`](12-graceful-shutdown-strategy.md)에서 확정한다
+- 이 문서에서는 종료 정책의 공통 원칙만 고정한다
 - 새 요청 수락은 종료 신호 이후 중단한다
-- 대기 중인 worker는 broadcast 또는 sentinel 방식으로 깨운다
-- 종료 플래그를 확인한 뒤 worker가 안전하게 빠져나가도록 한다
+- worker는 종료 상태를 확인한 뒤 안전하게 빠져나가도록 한다
 - `pthread_join()`으로 정리한다
 
 ## 큐 정책

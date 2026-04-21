@@ -62,9 +62,8 @@ Graceful shutdown은 MVP에서도 문서상 정의가 필요합니다.
 
 권장 방식:
 
-- 새 요청은 받지 않는다
-- 큐에 이미 들어간 job은 가능한 만큼 처리한다
-- worker는 sentinel job 또는 종료 플래그로 빠져나간다
+- 세부 선택지는 [`12-graceful-shutdown-strategy.md`](12-graceful-shutdown-strategy.md)를 따른다
+- 공통 원칙은 새 요청을 받지 않고, worker가 안전하게 빠져나가도록 만드는 것이다
 - `pthread_join()`으로 정리한다
 
 ## DB 동시성 정책

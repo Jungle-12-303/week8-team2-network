@@ -33,6 +33,7 @@
 9. [`09-plan-and-task-management-guide.md`](09-plan-and-task-management-guide.md)
 10. [`10-multi-persona-execution-guide.md`](10-multi-persona-execution-guide.md)
 11. [`11-implementation-policies.md`](11-implementation-policies.md)
+12. [`12-graceful-shutdown-strategy.md`](12-graceful-shutdown-strategy.md)
 
 ## 구현 목표
 
@@ -106,3 +107,4 @@
 - 병렬 구현은 6페르소나 모델로 돌린다
 - 최종 조율은 Coordinator / Integrator가 맡는다
 - 실제 I/O, 오류 매핑, 종료, 큐, 빌드 규칙은 `11-implementation-policies.md`를 기준으로 고정한다
+- graceful shutdown 방식은 `12-graceful-shutdown-strategy.md`에서 최종 확정한다
