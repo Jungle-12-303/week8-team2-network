@@ -25,6 +25,9 @@ docs/
     10-multi-persona-execution-guide.md
     11-implementation-policies.md
     12-graceful-shutdown-strategy.md
+    generated/
+      README.md
+      http-integration-test-plan.md
     task/
       README.md
       template.md
@@ -59,12 +62,12 @@ Good task cards should:
 
 ## Title Rule
 
-Prefer titles ending with `~함`.
+Prefer titles ending with `~??.
 
-- Good: `라우터 응답 포맷 정리함`
-- Good: `단위 테스트 케이스 추가함`
-- Good: `에러 메시지 표준화함`
-- Less good: `라우터 응답 포맷 정리해야 함`
+- Good: `?쇱슦???묐떟 ?щ㎎ ?뺣━??
+- Good: `?⑥쐞 ?뚯뒪??耳?댁뒪 異붽???
+- Good: `?먮윭 硫붿떆吏 ?쒖??뷀븿`
+- Less good: `?쇱슦???묐떟 ?щ㎎ ?뺣━?댁빞 ??
 
 Short titles are easier to manage and easier to treat like task cards.
 
@@ -130,6 +133,18 @@ Implementation policies, including socket I/O, SQL error mapping, shutdown, queu
 
 Graceful shutdown choices are compared in [`12-graceful-shutdown-strategy.md`](12-graceful-shutdown-strategy.md).
 
+### Generated Plans
+
+If we create a new plan during development and want to keep it separate from the canonical plan set, place it under [`generated/`](generated/).
+
+Use that folder for:
+
+- newly created test plans
+- temporary or working plans
+- plans produced while iterating on implementation
+
+Keep the canonical top-level `plan` files for project-wide direction, and keep generated plans isolated so they do not blur the baseline roadmap.
+
 ## Bottom Line
 
 - `plan` = direction and design rules
@@ -137,3 +152,4 @@ Graceful shutdown choices are compared in [`12-graceful-shutdown-strategy.md`](1
 - testing strategy stays in `plan`, while test execution items live in `task`
 
 That keeps the docs clean and the work easier to manage.
+
