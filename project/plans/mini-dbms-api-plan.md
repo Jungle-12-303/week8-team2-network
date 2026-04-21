@@ -29,6 +29,7 @@
 2. 고정 크기 thread pool + job queue 구현
 3. TEAM7 엔진을 감싼 DB 어댑터 계층 구현
 4. README만으로 실행, 테스트, 데모 재현 가능 상태 확보
+5. 로컬과 Docker 두 경로에서 같은 서버를 실행 가능하게 구성
 
 ## 역할 기반 개발 방식
 
@@ -70,6 +71,7 @@ PM -> Architect -> Developer -> QA -> Reviewer -> 수정 반복 -> 완료
 - `GET /health`, `POST /users`, `GET /users`, `GET /users/{id}` 구현
 - DB 전체 단위 read-write lock 기반 동시성 제어
 - 제한된 HTTP subset 지원
+- Docker 기반 빌드/실행/테스트 경로 제공
 - 실행 방법, 테스트 방법, 데모 흐름이 포함된 README 작성
 
 ## 이번 주 제외 범위
@@ -84,6 +86,9 @@ PM -> Architect -> Developer -> QA -> Reviewer -> 수정 반복 -> 완료
 - 고급 graceful shutdown
 - 디스크 영속성 확장
 - 범용 SQL API 공개
+- 프로덕션 배포 오케스트레이션
+- 쿠버네티스 배포
+- 고급 이미지 최적화
 
 ## 핵심 수정 방향
 
@@ -128,7 +133,14 @@ PM -> Architect -> Developer -> QA -> Reviewer -> 수정 반복 -> 완료
 - 압축
 - 범용 header 처리
 
-### 3. 소켓 처리 책임을 단순하게 고정한다
+### 3. 실행 환경은 로컬과 Docker 두 경로를 같이 제공한다
+
+- 로컬 실행 경로는 유지한다.
+- Docker 환경은 팀원 공통 실행 경로로 추가한다.
+- 서버 코드는 동일 바이너리를 기준으로 실행한다.
+- Docker 환경은 개발 편의와 발표 재현성을 위한 수단으로만 사용한다.
+
+### 4. 소켓 처리 책임을 단순하게 고정한다
 
 기본 흐름:
 
@@ -149,7 +161,7 @@ accept
 - 응답 write 책임이 명확하다.
 - C에서 메인/worker 간 버퍼 소유권이 덜 꼬인다.
 
-### 4. 동시성은 안전성 우선으로 단순화한다
+### 5. 동시성은 안전성 우선으로 단순화한다
 
 - 전역 DB 인스턴스 1개를 둔다.
 - DB 접근은 read-write lock 1개로 보호한다.
@@ -316,6 +328,8 @@ SELECT * FROM users WHERE id = {id};
 ├── third_party/
 │   └── team7_engine/
 ├── tests/
+├── Dockerfile
+├── docker-compose.yml
 ├── Makefile
 └── README.md
 ```
@@ -339,6 +353,7 @@ SELECT * FROM users WHERE id = {id};
 - 메인 스레드와 worker 책임을 확정한다.
 - DB 어댑터 경계를 확정한다.
 - 락 전략을 문서화한다.
+- Docker 실행 구조와 테스트 경로를 문서화한다.
 
 ### Developer 단계
 
@@ -346,12 +361,14 @@ SELECT * FROM users WHERE id = {id};
 - 서버보다 먼저 TEAM7 엔진 래핑 PoC를 만든다.
 - 기능 단위로 커밋을 나눈다.
 - 구현은 단순성과 데모 가능성을 우선한다.
+- 동일 바이너리가 로컬과 Docker에서 모두 실행되도록 환경 파일을 추가한다.
 
 ### QA 단계
 
 - 기능별 정상 케이스와 실패 케이스를 검증한다.
 - malformed request와 동시 요청을 반드시 테스트한다.
 - 실패 시 재현 절차를 남긴다.
+- Docker 경로에서도 빌드와 smoke test가 가능한지 확인한다.
 
 ### Reviewer 단계
 
@@ -441,6 +458,7 @@ SELECT * FROM users WHERE id = {id};
 - 실행 방법
 - API 예제
 - 동시 요청 테스트 명령
+- Docker 실행 명령
 - 구조 설명
 - 한계와 제외 범위
 
@@ -456,6 +474,7 @@ SELECT * FROM users WHERE id = {id};
 - `POST /users`
 - `GET /users`
 - `GET /users/{id}`
+- Docker 환경에서의 빌드와 smoke test
 
 ### 실패 케이스
 
@@ -486,6 +505,7 @@ SELECT * FROM users WHERE id = {id};
 - 왜 worker가 read/parse/execute/write/close를 모두 담당하는가
 - 왜 coarse-grained lock으로 시작했는가
 - 병렬 처리와 무결성을 어떻게 동시에 설명할 것인가
+- 왜 Docker 경로를 추가했고, 팀 실행 환경 차이를 어떻게 줄였는가
 
 ## Assumptions
 

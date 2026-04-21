@@ -3,6 +3,7 @@
 set -euo pipefail
 
 PORT="${PORT:-18081}"
+BASE_URL="${SMOKE_TEST_BASE_URL:-http://127.0.0.1:${PORT}}"
 SERVER="./mini_dbms_server"
 
 cleanup() {
@@ -14,16 +15,17 @@ cleanup() {
 
 trap cleanup EXIT
 
-"${SERVER}" "${PORT}" >/tmp/mini_dbms_server.log 2>/tmp/mini_dbms_server.err &
-SERVER_PID=$!
+if [[ -z "${SMOKE_TEST_BASE_URL:-}" ]]; then
+    "${SERVER}" "${PORT}" >/tmp/mini_dbms_server.log 2>/tmp/mini_dbms_server.err &
+    SERVER_PID=$!
+    sleep 1
+fi
 
-sleep 1
-
-curl -sS "http://127.0.0.1:${PORT}/health" | grep -q '"ok":true'
-curl -sS -X POST "http://127.0.0.1:${PORT}/users" \
+curl -sS "${BASE_URL}/health" | grep -q '"ok":true'
+curl -sS -X POST "${BASE_URL}/users" \
     -H 'Content-Type: application/json' \
     -d '{"name":"Alice","age":20}' | grep -q '"message":"created"'
-curl -sS "http://127.0.0.1:${PORT}/users" | grep -q '"row_count":1'
-curl -sS "http://127.0.0.1:${PORT}/users/1" | grep -q '"id":1'
+curl -sS "${BASE_URL}/users" | grep -q '"row_count":1'
+curl -sS "${BASE_URL}/users/1" | grep -q '"id":1'
 
 echo "smoke test passed"

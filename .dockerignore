@@ -1,0 +1,6 @@
+.git
+.gitignore
+*.o
+mini_dbms_server
+src/**/*.o
+third_party/team7_engine/*.o

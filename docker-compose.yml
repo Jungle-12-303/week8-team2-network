@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    command: ["./mini_dbms_server", "8080"]
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - app
+    environment:
+      PORT: "8080"
+      SMOKE_TEST_BASE_URL: "http://app:8080"
+    command: ["bash", "tests/smoke_test.sh"]

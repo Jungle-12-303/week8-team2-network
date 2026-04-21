@@ -29,4 +29,16 @@ clean:
 test: $(TARGET)
 	bash tests/smoke_test.sh
 
-.PHONY: all clean test
+docker-build:
+	docker compose build
+
+docker-up:
+	docker compose up -d app
+
+docker-down:
+	docker compose down
+
+docker-test:
+	docker compose run --rm test
+
+.PHONY: all clean test docker-build docker-up docker-down docker-test

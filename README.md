@@ -70,6 +70,40 @@ curl -i http://127.0.0.1:8080/users/1
 make test
 ```
 
+## Docker
+
+로컬 빌드 환경과 별개로 Docker 기반 실행 경로도 제공한다.
+
+### 이미지 빌드
+
+```bash
+make docker-build
+```
+
+### 서버 실행
+
+```bash
+make docker-up
+```
+
+또는:
+
+```bash
+docker compose up -d app
+```
+
+### Docker smoke test
+
+```bash
+make docker-test
+```
+
+### 종료
+
+```bash
+make docker-down
+```
+
 ## 문서 위치
 
 - [프로젝트 문서 인덱스](/Users/choeyeongbin/week8-team2-network/project/README.md)
@@ -77,6 +111,9 @@ make test
 - [API 설계](/Users/choeyeongbin/week8-team2-network/project/architecture/api-spec.md)
 - [PM 기능 문서](/Users/choeyeongbin/week8-team2-network/project/features/health-check.md)
 - [QA 테스트 케이스](/Users/choeyeongbin/week8-team2-network/project/qa/test-cases.md)
+- [Docker 기능 문서](/Users/choeyeongbin/week8-team2-network/project/features/docker-environment.md)
+- [Docker 설계 문서](/Users/choeyeongbin/week8-team2-network/project/architecture/docker-runtime.md)
+- [Docker 테스트 케이스](/Users/choeyeongbin/week8-team2-network/project/qa/docker-test-cases.md)
 
 ## 제한 사항
 
@@ -95,4 +132,6 @@ src/db/db_adapter.c         TEAM7 SQL 엔진 어댑터 + rwlock
 src/concurrency/*.c         thread pool / job queue
 third_party/team7_engine/   TEAM7 엔진 코드
 tests/smoke_test.sh         기본 endpoint smoke test
+Dockerfile                  도커 빌드 설정
+docker-compose.yml          도커 실행/테스트 설정
 ```
