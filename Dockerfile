@@ -1,5 +1,8 @@
 FROM ubuntu:24.04
 
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=Asia/Seoul
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     bash \

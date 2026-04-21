@@ -70,6 +70,36 @@ curl -i http://127.0.0.1:8080/users/1
 make test
 ```
 
+## Demo
+
+발표 때 가장 안전한 시연 순서는 아래와 같다.
+
+먼저 서버를 실행한다.
+
+```bash
+./mini_dbms_server 8080
+```
+
+다른 터미널에서 아래 명령을 순서대로 실행한다.
+
+```bash
+curl -i http://127.0.0.1:8080/health
+curl -i -X POST http://127.0.0.1:8080/users \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Alice","age":20}'
+curl -i http://127.0.0.1:8080/users
+curl -i http://127.0.0.1:8080/users/1
+make test
+```
+
+이 순서는 아래 항목을 순서대로 보여준다.
+
+- 서버 생존 확인
+- 사용자 생성
+- 전체 조회
+- 단건 조회
+- 자동 검증 재현
+
 ## Docker
 
 로컬 빌드 환경과 별개로 Docker 기반 실행 경로도 제공한다.
@@ -102,6 +132,24 @@ make docker-test
 
 ```bash
 make docker-down
+```
+
+## VS Code Dev Container
+
+`webproxy_lab_docker`처럼 VS Code에서 프로젝트를 열었을 때 Dev Container로
+다시 열 수 있도록 `.devcontainer/` 설정도 포함했다.
+
+사용 방법:
+
+1. VS Code로 이 프로젝트 폴더를 연다.
+2. Command Palette에서 `Dev Containers: Reopen in Container`를 실행한다.
+3. 처음 한 번은 `.devcontainer/Dockerfile` 기준으로 개발 컨테이너를 빌드한다.
+
+컨테이너 안에서는 일반 로컬 실행과 동일하게 아래 명령을 사용하면 된다.
+
+```bash
+make
+make test
 ```
 
 ## 문서 위치

@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include "server.h"
 
 #include <arpa/inet.h>
@@ -28,6 +26,26 @@ typedef struct HttpRequest {
 typedef struct ServerContext {
     DbHandle *db;
 } ServerContext;
+
+static const char *find_case_insensitive(const char *haystack,
+    const char *needle)
+{
+    size_t needle_length;
+
+    needle_length = strlen(needle);
+    if (needle_length == 0) {
+        return haystack;
+    }
+
+    while (*haystack != '\0') {
+        if (strncasecmp(haystack, needle, needle_length) == 0) {
+            return haystack;
+        }
+        haystack++;
+    }
+
+    return NULL;
+}
 
 static int send_all(int client_fd, const char *buffer, size_t length)
 {
@@ -100,7 +118,7 @@ static int parse_content_length(const char *headers, int *content_length)
     *content_length = 0;
     cursor = headers;
 
-    while ((cursor = strcasestr(cursor, "Content-Length:")) != NULL) {
+    while ((cursor = find_case_insensitive(cursor, "Content-Length:")) != NULL) {
         cursor += strlen("Content-Length:");
         while (*cursor == ' ' || *cursor == '\t') {
             cursor++;

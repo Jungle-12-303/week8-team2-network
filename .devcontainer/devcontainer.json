@@ -1,0 +1,27 @@
+{
+    "name": "week8-team2-network Dev Container",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "remoteUser": "jungle",
+    "workspaceFolder": "/workspaces/week8-team2-network",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools-extension-pack",
+                "ms-vscode.cpptools"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "C_Cpp.default.includePath": [
+                    "/usr/include",
+                    "/usr/local/include",
+                    "${workspaceFolder}/src",
+                    "${workspaceFolder}/third_party/team7_engine"
+                ],
+                "C_Cpp.default.compilerPath": "/usr/bin/gcc"
+            }
+        }
+    },
+    "postCreateCommand": "make clean || true"
+}

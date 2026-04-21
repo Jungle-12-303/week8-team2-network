@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -std=c99 -g -O0 -pthread
+CFLAGS = -Wall -Wextra -Werror -std=c99 -g -O0 -pthread \
+	-D_GNU_SOURCE -D_XOPEN_SOURCE=700
 INCLUDES = -I./src -I./third_party/team7_engine
 
 SRC = \
