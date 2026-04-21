@@ -6,7 +6,7 @@ RUN apt-get update \
 
 WORKDIR /app
 COPY . .
-RUN make db_server
+RUN make clean && make db_server
 
 FROM debian:bookworm-slim AS runtime
 

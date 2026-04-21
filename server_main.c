@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 
     server = server_create(&config);
     if (server == NULL) {
-        fprintf(stderr, "Failed to initialize server.\n");
+        fprintf(stderr, "Failed to initialize server: %s\n", server_last_error());
         return 1;
     }
 

@@ -6,7 +6,7 @@
   },
   "workspaceFolder": "/workspaces/week8-team2-network",
   "forwardPorts": [8080],
-  "postCreateCommand": "make db_server",
+  "postCreateCommand": "make clean && make db_server",
   "customizations": {
     "vscode": {
       "extensions": [

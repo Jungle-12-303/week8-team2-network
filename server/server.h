@@ -16,5 +16,6 @@ Server *server_create(const ServerConfig *config);
 int server_run(Server *server);
 void server_destroy(Server *server);
 void server_signal_shutdown(void);
+const char *server_last_error(void);
 
 #endif

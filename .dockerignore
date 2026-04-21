@@ -2,6 +2,7 @@
 .gitignore
 docs
 sql_processor/docs
+*.o
 sql_processor/*.o
 server/*.o
 db_server

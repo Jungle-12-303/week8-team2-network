@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -19,16 +20,29 @@
 struct Server {
     int listen_fd;
     Table *table;
-    pthread_mutex_t db_mutex;
+    pthread_rwlock_t db_lock;
     ThreadPool pool;
     ServerConfig config;
     int initialized;
 };
 
 static volatile sig_atomic_t g_shutdown_requested = 0;
+static char g_server_last_error[256];
+
+static void server_set_error(const char *format, ...) {
+    va_list args;
+
+    va_start(args, format);
+    vsnprintf(g_server_last_error, sizeof(g_server_last_error), format, args);
+    va_end(args);
+}
 
 void server_signal_shutdown(void) {
     g_shutdown_requested = 1;
+}
+
+const char *server_last_error(void) {
+    return g_server_last_error;
 }
 
 static int server_shutdown_requested(void) {
@@ -42,6 +56,7 @@ static int server_make_listen_socket(unsigned short port, int backlog) {
 
     listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_fd < 0) {
+        server_set_error("socket() failed: %s", strerror(errno));
         return -1;
     }
 
@@ -53,11 +68,13 @@ static int server_make_listen_socket(unsigned short port, int backlog) {
     address.sin_port = htons(port);
 
     if (bind(listen_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        server_set_error("bind() failed on port %u: %s", port, strerror(errno));
         close(listen_fd);
         return -1;
     }
 
     if (listen(listen_fd, backlog) < 0) {
+        server_set_error("listen() failed: %s", strerror(errno));
         close(listen_fd);
         return -1;
     }
@@ -135,7 +152,7 @@ static void server_handle_client(void *context, int client_fd) {
         return;
     }
 
-    if (!api_handle_query(server->table, &server->db_mutex, request.body, &api_result)) {
+    if (!api_handle_query(server->table, &server->db_lock, request.body, &api_result)) {
         char *body = server_build_error_body("internal_error", "Failed to execute SQL");
         if (body != NULL) {
             http_send_response(client_fd, 500, "application/json; charset=utf-8", body);
@@ -151,12 +168,16 @@ static void server_handle_client(void *context, int client_fd) {
 Server *server_create(const ServerConfig *config) {
     Server *server;
 
+    g_server_last_error[0] = '\0';
+
     if (config == NULL) {
+        server_set_error("server config is NULL");
         return NULL;
     }
 
     server = (Server *)calloc(1, sizeof(Server));
     if (server == NULL) {
+        server_set_error("failed to allocate server");
         return NULL;
     }
 
@@ -166,11 +187,13 @@ Server *server_create(const ServerConfig *config) {
 
     server->table = table_create();
     if (server->table == NULL) {
+        server_set_error("table_create() failed");
         free(server);
         return NULL;
     }
 
-    if (pthread_mutex_init(&server->db_mutex, NULL) != 0) {
+    if (pthread_rwlock_init(&server->db_lock, NULL) != 0) {
+        server_set_error("pthread_rwlock_init() failed");
         table_destroy(server->table);
         server->table = NULL;
         free(server);
@@ -178,7 +201,8 @@ Server *server_create(const ServerConfig *config) {
     }
 
     if (!thread_pool_init(&server->pool, config->worker_count, config->queue_capacity, server_handle_client, server)) {
-        pthread_mutex_destroy(&server->db_mutex);
+        server_set_error("thread_pool_init() failed");
+        pthread_rwlock_destroy(&server->db_lock);
         table_destroy(server->table);
         server->table = NULL;
         free(server);
@@ -188,7 +212,7 @@ Server *server_create(const ServerConfig *config) {
     server->listen_fd = server_make_listen_socket(config->port, config->backlog);
     if (server->listen_fd < 0) {
         thread_pool_destroy(&server->pool);
-        pthread_mutex_destroy(&server->db_mutex);
+        pthread_rwlock_destroy(&server->db_lock);
         table_destroy(server->table);
         server->table = NULL;
         free(server);
@@ -248,7 +272,7 @@ void server_destroy(Server *server) {
         server->listen_fd = -1;
     }
 
-    pthread_mutex_destroy(&server->db_mutex);
+    pthread_rwlock_destroy(&server->db_lock);
 
     if (server->table != NULL) {
         table_destroy(server->table);

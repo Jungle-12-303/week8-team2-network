@@ -2,8 +2,18 @@
 
 #include "json_util.h"
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+
+static int api_is_read_only_sql(const char *sql) {
+    while (*sql != '\0' && isspace((unsigned char)*sql)) {
+        sql++;
+    }
+
+    return strncasecmp(sql, "SELECT", 6) == 0;
+}
 
 static const char *api_action_name(SQLAction action) {
     switch (action) {
@@ -105,10 +115,11 @@ static int api_build_error_response(const SQLResult *sql_result, JsonBuffer *buf
     return json_buffer_append(buffer, "}");
 }
 
-int api_handle_query(Table *table, pthread_mutex_t *db_mutex, const char *sql, ApiResult *result) {
+int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, ApiResult *result) {
     SQLResult sql_result;
     JsonBuffer buffer;
     int ok;
+    int lock_result;
 
     if (result == NULL) {
         return 0;
@@ -117,11 +128,17 @@ int api_handle_query(Table *table, pthread_mutex_t *db_mutex, const char *sql, A
     result->http_status = 500;
     result->body = NULL;
 
-    if (table == NULL || db_mutex == NULL || sql == NULL) {
+    if (table == NULL || db_lock == NULL || sql == NULL) {
         return 0;
     }
 
-    if (pthread_mutex_lock(db_mutex) != 0) {
+    if (api_is_read_only_sql(sql)) {
+        lock_result = pthread_rwlock_rdlock(db_lock);
+    } else {
+        lock_result = pthread_rwlock_wrlock(db_lock);
+    }
+
+    if (lock_result != 0) {
         return 0;
     }
 
@@ -129,7 +146,7 @@ int api_handle_query(Table *table, pthread_mutex_t *db_mutex, const char *sql, A
 
     if (!json_buffer_init(&buffer, 256)) {
         sql_result_destroy(&sql_result);
-        pthread_mutex_unlock(db_mutex);
+        pthread_rwlock_unlock(db_lock);
         return 0;
     }
 
@@ -154,7 +171,7 @@ int api_handle_query(Table *table, pthread_mutex_t *db_mutex, const char *sql, A
     }
 
     sql_result_destroy(&sql_result);
-    pthread_mutex_unlock(db_mutex);
+    pthread_rwlock_unlock(db_lock);
 
     if (!ok) {
         json_buffer_destroy(&buffer);
