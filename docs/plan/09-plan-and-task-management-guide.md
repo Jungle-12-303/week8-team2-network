@@ -25,6 +25,9 @@ docs/
     10-multi-persona-execution-guide.md
     11-implementation-policies.md
     12-graceful-shutdown-strategy.md
+    generated/
+      README.md
+      http-integration-test-plan.md
     task/
       README.md
       template.md
@@ -129,6 +132,18 @@ Detailed persona responsibilities live in [`personas/README.md`](personas/README
 Implementation policies, including socket I/O, SQL error mapping, shutdown, queue behavior, and build rules, live in [`11-implementation-policies.md`](11-implementation-policies.md).
 
 Graceful shutdown choices are compared in [`12-graceful-shutdown-strategy.md`](12-graceful-shutdown-strategy.md).
+
+### Generated Plans
+
+If we create a new plan during development and want to keep it separate from the canonical plan set, place it under [`generated/`](generated/).
+
+Use that folder for:
+
+- newly created test plans
+- temporary or working plans
+- plans produced while iterating on implementation
+
+Keep the canonical top-level `plan` files for project-wide direction, and keep generated plans isolated so they do not blur the baseline roadmap.
 
 ## Bottom Line
 
