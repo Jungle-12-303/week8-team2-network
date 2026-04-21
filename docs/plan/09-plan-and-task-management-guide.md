@@ -1,21 +1,13 @@
 # 09. Plan And Task Management Guide
 
-## 왜 이 문서가 필요한가
+## Why This Guide Exists
 
-이 프로젝트는 `plan` 문서만 잘 써도 충분히 시작할 수 있지만, 실제 구현 단계로 들어가면 계획 수준의 문장만으로는 작업이 흐려지기 쉽다.  
-그래서 역할을 둘로 나누는 편이 좋다.
+`plan` documents are best for direction, scope, ordering, and testing strategy.
+`task` documents are best for the tiny implementation cards we can actually execute.
 
-- `plan`: 무엇을, 어떤 순서와 기준으로 할지 정리하는 문서
-- `task`: 실제로 손대야 하는 아주 세부적인 작업을 카드처럼 쪼개서 관리하는 문서
+Keeping them separate makes the work easier to track.
 
-이렇게 나누면 다음 장점이 있다.
-
-- 큰 방향과 작은 실행 항목이 섞이지 않는다.
-- 작업 누락을 줄일 수 있다.
-- 테스트, 문서화, 리팩터링을 구현과 분리해서 추적할 수 있다.
-- 여러 사람이 동시에 작업해도 충돌이 줄어든다.
-
-## 권장 폴더 구조
+## Recommended Structure
 
 ```text
 docs/
@@ -30,109 +22,111 @@ docs/
     07-test-and-quality-plan.md
     08-demo-and-readme-plan.md
     09-plan-and-task-management-guide.md
-  task/
-    README.md
-    template.md
-    0001-*.md
-    0002-*.md
+    task/
+      README.md
+      template.md
+      0001-*.md
+      0002-*.md
 ```
 
-## plan 폴더를 어떻게 쓰면 좋은가
+## How To Use `plan`
 
-`plan`은 다음 질문에 답하는 데 집중한다.
+Use `plan` to answer:
 
-- 이 프로젝트의 목표가 무엇인가
-- 어떤 범위까지 할 것인가
-- 어떤 설계 결정을 먼저 고정할 것인가
-- 어떤 순서로 구현할 것인가
-- 어떤 테스트가 필요한가
-- 발표와 README는 무엇을 담아야 하는가
+- What are we building?
+- What is in scope?
+- What should we decide first?
+- What is the implementation order?
+- What tests are required?
+- What should the README and demo cover?
 
-즉, `plan`은 의사결정 문서다.
-코드 한 줄을 직접 바꾸는 체크리스트가 아니라, 구현을 흔들리지 않게 잡아주는 기준점으로 쓰는 편이 좋다.
+`plan` is the decision layer, not the execution layer.
 
-## task 폴더를 어떻게 쓰면 좋은가
+## How To Use `task`
 
-`task`는 구현 가능한 최소 단위로 쪼갠 카드 모음이다.
-각 카드는 "무엇을 할지"보다 "무엇을 끝내야 하는지"가 분명해야 한다.
+Use `task` for the smallest actionable work units.
 
-좋은 task 카드의 기준은 아래와 같다.
+Good task cards should:
 
-- 한 장으로 읽히는가
-- 완료 조건이 보이는가
-- 테스트나 검증 방법이 적혀 있는가
-- 다른 카드와 의존성이 드러나는가
-- 너무 크면 더 잘게 쪼갤 수 있는가
+- Be readable on one page
+- Have clear completion criteria
+- Include test or validation steps
+- Show dependencies
+- Stay small enough to finish without losing focus
 
-### 카드 제목 규칙
+## Title Rule
 
-카드 제목은 가능하면 `~함` 형태로 끝내는 것을 권장한다.
+Prefer titles ending with `~함`.
 
-- 좋음: `라우터 응답 포맷 정리함`
-- 좋음: `단위 테스트 케이스 추가함`
-- 좋음: `에러 메시지 표준화함`
-- 덜 좋음: `라우터 응답 포맷 정리해야 함`
+- Good: `라우터 응답 포맷 정리함`
+- Good: `단위 테스트 케이스 추가함`
+- Good: `에러 메시지 표준화함`
+- Less good: `라우터 응답 포맷 정리해야 함`
 
-이렇게 쓰면 카드 제목이 더 짧고, 상태 관리용 메모처럼 보이기 쉬워진다.
+Short titles are easier to manage and easier to treat like task cards.
 
-## 테스트는 plan에 이미 있는가
+## Is Testing Already In `plan`?
 
-있다. 현재 `docs/plan/07-test-and-quality-plan.md`에는 이미 테스트 계획이 들어가 있다.
+Yes.
 
-포함된 축은 다음과 같다.
+`docs/plan/07-test-and-quality-plan.md` already covers:
 
-- 기존 SQL 처리기 단위 테스트
-- API 기능 테스트
-- 동시성 테스트
-- 예외 및 에러 응답 확인
-- 발표 전 체크리스트
+- Unit tests
+- API tests
+- Concurrency tests
+- Error handling checks
+- Pre-demo checklist
 
-즉, 테스트 계획이 없는 상태는 아니다.  
-다만 지금 구조를 더 좋게 쓰려면 `plan`에는 테스트 전략을 유지하고, `task`에는 실제로 실행할 테스트 항목을 잘게 쪼개 넣는 방식이 좋다.
+So testing is already planned. The better split is:
 
-## 추천 운영 방식
+- `plan` holds the testing strategy
+- `task` holds the concrete test cards
 
-1. 먼저 `plan`에서 범위와 순서를 정한다.
-2. 그다음 `task`로 구현 항목을 아주 작게 쪼갠다.
-3. 각 task에 완료 기준과 테스트 기준을 적는다.
-4. 구현하면서 task를 완료 처리한다.
-5. 테스트가 늘어나면 `07-test-and-quality-plan.md`와 task 카드를 같이 갱신한다.
+## Recommended Workflow
 
-## 더 좋은 plan 아이디어
+1. Set scope and order in `plan`
+2. Split implementation into small `task` cards
+3. Write completion criteria for each card
+4. Mark cards done while implementing
+5. Update test planning when coverage changes
 
-현재 구조에 아래 두 가지를 더하면 훨씬 관리가 쉬워진다.
+## Extra Ideas
 
-### 1. Decision log 분리
+### Decision Log
 
-중요한 선택 사항은 별도 `docs/decisions/` 같은 위치로 분리하면 좋다.
+If an important choice keeps showing up, consider a separate `docs/decisions/` area for it.
 
-예시:
+Examples:
 
-- 왜 HTTP를 쓰는지
-- 왜 특정 응답 포맷을 택했는지
-- 왜 이 구현 순서인지
-- 왜 특정 테스트 범위를 우선하는지
+- Why use HTTP
+- Why choose a specific response shape
+- Why the implementation order is what it is
+- Why a test was added or delayed
 
-이렇게 하면 plan 문서가 결정 메모로 부풀어 오르는 것을 막을 수 있다.
+### Milestone Cards
 
-### 2. Milestone 기준 카드 분리
+Grouping tasks by milestone makes progress easier to read.
 
-task를 기능별이 아니라 마일스톤별로 묶으면 진행 상황이 더 잘 보인다.
+Examples:
 
-예시:
+- `M1` foundation
+- `M2` API contract
+- `M3` concurrency
+- `M4` tests
+- `M5` demo and docs
 
-- `M1` 기반 구조
-- `M2` API 계약
-- `M3` 동시성 처리
-- `M4` 테스트
-- `M5` 발표 자료
+### Multi Persona Execution
 
-## 결론
+If we want to split implementation across multiple Codex personas, use the operating guide in [`10-multi-persona-execution-guide.md`](10-multi-persona-execution-guide.md).
 
-추천 구조는 이렇다.
+That guide defines the recommended persona count, ownership rules, and handoff behavior.
 
-- `plan`: 프로젝트 방향과 설계 기준
-- `task`: 구현해야 할 세부 카드
-- `test`: plan에서 전략을 유지하고 task에서 실행 항목으로 쪼개기
+Detailed persona responsibilities live in [`personas/README.md`](personas/README.md).
 
-이 방식이면 계획과 실행이 분리되고, 문서가 커져도 흐트러지지 않는다.
+## Bottom Line
+
+- `plan` = direction and design rules
+- `task` = small implementation cards
+- testing strategy stays in `plan`, while test execution items live in `task`
+
+That keeps the docs clean and the work easier to manage.
