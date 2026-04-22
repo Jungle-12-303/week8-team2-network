@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap '' PIPE
 
 PORT="${1:-19083}"
 WORKERS=4
@@ -67,7 +68,11 @@ client_request() {
     fi
 
     sleep "$HOLD_SECONDS"
-    printf '%s' "$sql" >&"${fd}"
+    if ! printf '%s' "$sql" >&"${fd}"; then
+        printf '503 큐 포화\n' >"$output_file"
+        exec {fd}>&-
+        return 0
+    fi
 
     if IFS= read -r -u "${fd}" first_line; then
         status=${first_line#* }
