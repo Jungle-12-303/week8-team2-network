@@ -92,4 +92,5 @@
 - 새로운 테스트가 추가되면 먼저 `scripts/` 또는 `scripts/tests/`에 실행 스크립트를 넣고, 그다음 `docs/test/demo/tests/` 또는 `docs/test/*/README.md`에 안내 문서를 붙인다.
 ## Demo Scenario
 
+- [demo-scenario-presentation.md](demo-scenario-presentation.md)
 - [demo-scenario.md](demo-scenario.md)

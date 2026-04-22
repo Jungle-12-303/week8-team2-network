@@ -4,6 +4,8 @@ set -eu
 PORT="${1:-18080}"
 SERVER_PID=""
 SERVER_LOG="${TMPDIR:-/tmp}/demo_scenario_server_$$.log"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+REPO_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 
 cleanup() {
     if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
@@ -29,7 +31,7 @@ wait_for_server() {
 
 trap cleanup EXIT INT TERM
 
-cd /app
+cd "$REPO_ROOT"
 
 printf '==========================================\n'
 printf '[1/3] Internal DB engine and API server link\n'
@@ -50,14 +52,20 @@ SELECT * FROM users WHERE id = 1;
 EOF
 
 printf '\n==========================================\n'
-printf '[2/3] Multithread concurrency issue\n'
+printf '[2/3] RW lock concurrency smoke test\n'
 printf '==========================================\n'
-sh scripts/rwlock_stress_test.sh
+printf 'This stage is a short concurrency confirmation and usually finishes within a few seconds.\n'
+sh scripts/tests/concurrency/rwlock_quick_demo_test.sh 18081
+
+if [ "${DEMO_INCLUDE_LONG_CONCURRENCY:-0}" = "1" ]; then
+    printf '\n[optional] Long concurrency stress test (slow, appendix only)\n'
+    sh scripts/rwlock_stress_test.sh 18081
+fi
 
 printf '\n==========================================\n'
 printf '[3/3] API server architecture\n'
 printf '==========================================\n'
-sh scripts/multi_client_demo.sh
+sh scripts/multi_client_demo.sh 19083
 
 printf '\n==========================================\n'
 printf 'Demo finished successfully\n'

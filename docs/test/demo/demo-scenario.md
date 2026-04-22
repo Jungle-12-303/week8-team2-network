@@ -24,6 +24,9 @@
 make demo
 ```
 
+기본 데모는 3초 안팎으로 끝나는 `rwlock quick demo`를 포함한다.
+긴 동시성 스트레스는 `DEMO_INCLUDE_LONG_CONCURRENCY=1 make demo`일 때만 추가로 돌린다.
+
 ### Windows 실행
 
 ```bat
@@ -117,9 +120,11 @@ sh scripts/demo/demo_scenario.sh 18080
 
 - 동시 요청이 모두 정상 처리된다.
 - 최종 검증에서 row 수가 기대값과 맞는다.
-- 마지막에 `bucket lock stress test passed.`가 출력된다.
+- 마지막에 `rwlock quick demo test passed.`가 출력된다.
 
-즉, 이 단계에서는 읽기와 쓰기가 동시에 와도 결과가 깨지지 않는다는 점을 보여준다.
+즉, 이 단계에서는 읽기와 쓰기가 동시에 와도 결과가 깨지지 않는다는 점을 짧게 보여준다.
+
+긴 스트레스 테스트는 발표 본편이 아니라 옵션 부록이다.
 
 #### 3) API 서버 아키텍처
 
@@ -156,7 +161,7 @@ Demo finished successfully
 ### 발표 때 강조할 포인트
 
 - 1단계는 "외부 HTTP 요청이 내부 DB 엔진으로 연결된다"는 것을 보여주는 장면이다.
-- 2단계는 "동시성 문제를 read lock / write lock으로 제어한다"는 것을 보여주는 장면이다.
+- 2단계는 "읽기/쓰기 동시성도 짧게 확인된다"는 것을 보여주는 장면이다.
 - 3단계는 "스레드풀과 큐로 API 서버의 병렬 처리와 과부하 제어를 한다"는 것을 보여주는 장면이다.
 
 ## 2. 데모 한 줄 요약
