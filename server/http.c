@@ -34,12 +34,14 @@ static int read_until_header_end(int client_fd, char *buffer, size_t buffer_size
         if (*used == buffer_size) {
             return 0;
         }
-
         {
             ssize_t n = recv(client_fd, buffer + *used, buffer_size - *used, 0);
             if (n < 0) {
                 if (errno == EINTR) {
                     continue;
+                }
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    return -1;
                 }
                 return 0;
             }
@@ -81,6 +83,8 @@ const char *http_status_reason(int status_code) {
             return "Not Found";
         case 405:
             return "Method Not Allowed";
+        case 408:
+            return "Request Timeout";
         case 413:
             return "Payload Too Large";
         case 500:
@@ -113,12 +117,23 @@ int http_read_request(int client_fd, HttpRequest *request, int *error_status, ch
 
     memset(request, 0, sizeof(*request));
 
-    if (!read_until_header_end(client_fd, buffer, sizeof(buffer), &used, &header_end)) {
-        if (error_status != NULL) {
-            *error_status = 400;
+    {
+        int header_read_result = read_until_header_end(client_fd, buffer, sizeof(buffer), &used, &header_end);
+
+        if (header_read_result <= 0) {
+            if (header_read_result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+                if (error_status != NULL) {
+                    *error_status = 408;
+                }
+                set_error(error_message, error_message_size, "Request timed out");
+                return -1;
+            }
+            if (error_status != NULL) {
+                *error_status = 400;
+            }
+            set_error(error_message, error_message_size, "Malformed HTTP request");
+            return -1;
         }
-        set_error(error_message, error_message_size, "Malformed HTTP request");
-        return -1;
     }
 
     buffer[header_end] = '\0';
@@ -228,6 +243,13 @@ int http_read_request(int client_fd, HttpRequest *request, int *error_status, ch
         if (n < 0) {
             if (errno == EINTR) {
                 continue;
+            }
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (error_status != NULL) {
+                    *error_status = 408;
+                }
+                set_error(error_message, error_message_size, "Request timed out");
+                return -1;
             }
             if (error_status != NULL) {
                 *error_status = 400;

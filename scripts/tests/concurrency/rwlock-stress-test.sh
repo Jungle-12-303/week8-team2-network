@@ -61,7 +61,7 @@ assert_ok "$seed_response"
 
 i=1
 job_pids=""
-while [ "$i" -le 10 ]; do
+while [ "$i" -le 32 ]; do
     reader_response="$TMP_DIR/reader_$i.json"
     writer_response="$TMP_DIR/writer_$i.json"
 
@@ -95,6 +95,6 @@ assert_ok "$final_response"
 
 row_count="$(printf '%s' "$final_response" | sed -n 's/.*"row_count":\([0-9][0-9]*\).*/\1/p')"
 [ -n "$row_count" ] || fail "Could not extract row_count from final SELECT response"
-[ "$row_count" -eq 11 ] || fail "Expected row_count to be 11, got $row_count"
+[ "$row_count" -eq 33 ] || fail "Expected row_count to be 33, got $row_count"
 
-printf '%s\n' "rwlock stress test passed."
+printf '%s\n' "bucket lock stress test passed."

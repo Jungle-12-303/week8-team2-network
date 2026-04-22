@@ -106,13 +106,11 @@ static int api_build_error_response(const SQLResult *sql_result, JsonBuffer *buf
     return json_buffer_append(buffer, "}");
 }
 
-int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, ApiResult *result) {
+int api_handle_query(Table *table, const char *sql, ApiResult *result) {
     SQLParseResult parse_result;
     SQLResult sql_result;
     JsonBuffer buffer;
-    SQLLockMode lock_mode;
     int ok;
-    int locked = 0;
 
     if (result == NULL) {
         return 0;
@@ -121,7 +119,7 @@ int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, A
     result->http_status = 500;
     result->body = NULL;
 
-    if (table == NULL || db_lock == NULL || sql == NULL) {
+    if (table == NULL || sql == NULL) {
         return 0;
     }
 
@@ -178,25 +176,7 @@ int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, A
         return result->body != NULL;
     }
 
-    lock_mode = sql_command_lock_mode(&parse_result.command);
-    if (lock_mode == SQL_LOCK_READ) {
-        if (pthread_rwlock_rdlock(db_lock) != 0) {
-            return 0;
-        }
-        locked = 1;
-    } else if (lock_mode == SQL_LOCK_WRITE) {
-        if (pthread_rwlock_wrlock(db_lock) != 0) {
-            return 0;
-        }
-        locked = 1;
-    }
-
     sql_result = sql_execute_plan(table, &parse_result.command);
-
-    if (locked) {
-        pthread_rwlock_unlock(db_lock);
-        locked = 0;
-    }
 
     if (!json_buffer_init(&buffer, 256)) {
         sql_result_destroy(&sql_result);

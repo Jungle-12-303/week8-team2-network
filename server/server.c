@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 struct Server {
@@ -65,6 +66,23 @@ static int server_make_listen_socket(unsigned short port, int backlog) {
     return listen_fd;
 }
 
+static int server_set_client_socket_timeouts(int client_fd) {
+    struct timeval timeout;
+
+    timeout.tv_sec = HTTP_SOCKET_IO_TIMEOUT_SECONDS;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0) {
+        return 0;
+    }
+
+    if (setsockopt(client_fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) != 0) {
+        return 0;
+    }
+
+    return 1;
+}
+
 static char *server_build_error_body(const char *status, const char *message) {
     JsonBuffer buffer;
 
@@ -102,6 +120,8 @@ static const char *server_http_error_status_name(int status_code) {
             return "not_found";
         case 405:
             return "method_not_allowed";
+        case 408:
+            return "request_timeout";
         case 413:
             return "payload_too_large";
         case 500:
@@ -220,6 +240,11 @@ int server_run(Server *server) {
                 break;
             }
             break;
+        }
+
+        if (!server_set_client_socket_timeouts(client_fd)) {
+            close(client_fd);
+            continue;
         }
 
         if (!thread_pool_submit(&server->pool, client_fd)) {

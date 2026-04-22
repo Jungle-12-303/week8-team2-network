@@ -105,6 +105,8 @@ static int collect_id_condition_by_row_scan(
     Record ***records,
     size_t *count
 ) {
+    Record **all_records = NULL;
+    size_t all_count = 0;
     size_t index;
     size_t capacity = 0;
 
@@ -125,9 +127,14 @@ static int collect_id_condition_by_row_scan(
         return append_record(records, count, &capacity, record);
     }
 
-    for (index = 0; index < table->size; index++) {
-        if (compare_int(table->rows[index]->id, comparison, id)) {
-            if (!append_record(records, count, &capacity, table->rows[index])) {
+    if (!table_collect_all(table, &all_records, &all_count)) {
+        return 0;
+    }
+
+    for (index = 0; index < all_count; index++) {
+        if (compare_int(all_records[index]->id, comparison, id)) {
+            if (!append_record(records, count, &capacity, all_records[index])) {
+                free(all_records);
                 free(*records);
                 *records = NULL;
                 *count = 0;
@@ -136,6 +143,7 @@ static int collect_id_condition_by_row_scan(
         }
     }
 
+    free(all_records);
     return 1;
 }
 
