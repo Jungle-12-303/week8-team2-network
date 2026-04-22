@@ -5,6 +5,123 @@
 #include <stdlib.h>
 #include <string.h>
 
+static int fair_rwlock_init(FairRWLock *lock) {
+    if (lock == NULL) {
+        return 0;
+    }
+
+    memset(lock, 0, sizeof(*lock));
+
+    if (pthread_mutex_init(&lock->mutex, NULL) != 0) {
+        return 0;
+    }
+
+    if (pthread_cond_init(&lock->readers_ok, NULL) != 0) {
+        pthread_mutex_destroy(&lock->mutex);
+        return 0;
+    }
+
+    if (pthread_cond_init(&lock->writers_ok, NULL) != 0) {
+        pthread_cond_destroy(&lock->readers_ok);
+        pthread_mutex_destroy(&lock->mutex);
+        return 0;
+    }
+
+    lock->initialized = 1;
+    return 1;
+}
+
+static void fair_rwlock_destroy(FairRWLock *lock) {
+    if (lock == NULL || !lock->initialized) {
+        return;
+    }
+
+    pthread_cond_destroy(&lock->writers_ok);
+    pthread_cond_destroy(&lock->readers_ok);
+    pthread_mutex_destroy(&lock->mutex);
+    lock->initialized = 0;
+}
+
+static int fair_rwlock_rdlock(FairRWLock *lock) {
+    if (lock == NULL) {
+        return 0;
+    }
+
+    if (pthread_mutex_lock(&lock->mutex) != 0) {
+        return 0;
+    }
+
+    while (lock->active_writer || lock->waiting_writers > 0) {
+        if (pthread_cond_wait(&lock->readers_ok, &lock->mutex) != 0) {
+            pthread_mutex_unlock(&lock->mutex);
+            return 0;
+        }
+    }
+
+    lock->active_readers++;
+    pthread_mutex_unlock(&lock->mutex);
+    return 1;
+}
+
+static int fair_rwlock_wrlock(FairRWLock *lock) {
+    if (lock == NULL) {
+        return 0;
+    }
+
+    if (pthread_mutex_lock(&lock->mutex) != 0) {
+        return 0;
+    }
+
+    lock->waiting_writers++;
+    while (lock->active_writer || lock->active_readers > 0) {
+        if (pthread_cond_wait(&lock->writers_ok, &lock->mutex) != 0) {
+            lock->waiting_writers--;
+            pthread_mutex_unlock(&lock->mutex);
+            return 0;
+        }
+    }
+
+    lock->waiting_writers--;
+    lock->active_writer = 1;
+    pthread_mutex_unlock(&lock->mutex);
+    return 1;
+}
+
+static void fair_rwlock_unlock_read(FairRWLock *lock) {
+    if (lock == NULL || pthread_mutex_lock(&lock->mutex) != 0) {
+        return;
+    }
+
+    if (lock->active_readers > 0) {
+        lock->active_readers--;
+    }
+
+    if (lock->active_readers == 0) {
+        if (lock->waiting_writers > 0) {
+            pthread_cond_signal(&lock->writers_ok);
+        } else {
+            pthread_cond_broadcast(&lock->readers_ok);
+        }
+    }
+
+    pthread_mutex_unlock(&lock->mutex);
+}
+
+static void fair_rwlock_unlock_write(FairRWLock *lock) {
+    if (lock == NULL || pthread_mutex_lock(&lock->mutex) != 0) {
+        return;
+    }
+
+    lock->active_writer = 0;
+    if (lock->waiting_writers > 0) {
+        pthread_cond_signal(&lock->writers_ok);
+    } else {
+        pthread_cond_broadcast(&lock->readers_ok);
+    }
+
+    pthread_mutex_unlock(&lock->mutex);
+}
+
 /* Frees all bucket-owned records and the B+ tree indexes. */
 void table_destroy(Table *table);
 
@@ -144,18 +261,18 @@ static int table_collect_all_sorted(Table *table, Record ***records, size_t *cou
     for (index = 0; index < TABLE_BUCKET_COUNT; index++) {
         TableBucket *bucket = &table->buckets[index];
 
-        if (pthread_rwlock_rdlock(&bucket->lock) != 0) {
+        if (!fair_rwlock_rdlock(&bucket->lock)) {
             table_free_record_array(records, count);
             return 0;
         }
 
         if (!table_collect_bucket_rows_locked(bucket, records, count, &capacity)) {
-            pthread_rwlock_unlock(&bucket->lock);
+            fair_rwlock_unlock_read(&bucket->lock);
             table_free_record_array(records, count);
             return 0;
         }
 
-        pthread_rwlock_unlock(&bucket->lock);
+        fair_rwlock_unlock_read(&bucket->lock);
     }
 
     table_sort_records_by_id(*records, *count);
@@ -183,7 +300,7 @@ Table *table_create(void) {
     for (index = 0; index < TABLE_BUCKET_COUNT; index++) {
         TableBucket *bucket = &table->buckets[index];
 
-        if (pthread_rwlock_init(&bucket->lock, NULL) != 0) {
+        if (!fair_rwlock_init(&bucket->lock)) {
             table_destroy(table);
             return NULL;
         }
@@ -223,7 +340,7 @@ void table_destroy(Table *table) {
         bptree_destroy(bucket->pk_index);
         bucket->pk_index = NULL;
 
-        pthread_rwlock_destroy(&bucket->lock);
+        fair_rwlock_destroy(&bucket->lock);
     }
 
     if (table->next_id_lock_initialized) {
@@ -252,18 +369,18 @@ Record *table_insert(Table *table, const char *name, int age) {
 
     bucket = &table->buckets[table_bucket_index_for_id(record_id)];
 
-    if (pthread_rwlock_wrlock(&bucket->lock) != 0) {
+    if (!fair_rwlock_wrlock(&bucket->lock)) {
         return NULL;
     }
 
     if (!table_ensure_capacity(bucket)) {
-        pthread_rwlock_unlock(&bucket->lock);
+        fair_rwlock_unlock_write(&bucket->lock);
         return NULL;
     }
 
     record = (Record *)calloc(1, sizeof(Record));
     if (record == NULL) {
-        pthread_rwlock_unlock(&bucket->lock);
+        fair_rwlock_unlock_write(&bucket->lock);
         return NULL;
     }
 
@@ -274,13 +391,13 @@ Record *table_insert(Table *table, const char *name, int age) {
 
     if (!bptree_insert(bucket->pk_index, record->id, record)) {
         free(record);
-        pthread_rwlock_unlock(&bucket->lock);
+        fair_rwlock_unlock_write(&bucket->lock);
         return NULL;
     }
 
     bucket->rows[bucket->size] = record;
     bucket->size++;
-    pthread_rwlock_unlock(&bucket->lock);
+    fair_rwlock_unlock_write(&bucket->lock);
     return record;
 }
 
@@ -294,12 +411,12 @@ Record *table_find_by_id(Table *table, int id) {
     }
 
     bucket = &table->buckets[table_bucket_index_for_id(id)];
-    if (pthread_rwlock_rdlock(&bucket->lock) != 0) {
+    if (!fair_rwlock_rdlock(&bucket->lock)) {
         return NULL;
     }
 
     record = (Record *)bptree_search(bucket->pk_index, id);
-    pthread_rwlock_unlock(&bucket->lock);
+    fair_rwlock_unlock_read(&bucket->lock);
     return record;
 }
 
@@ -315,19 +432,19 @@ Record *table_scan_by_id(Table *table, int id) {
     for (bucket_index = 0; bucket_index < TABLE_BUCKET_COUNT; bucket_index++) {
         TableBucket *bucket = &table->buckets[bucket_index];
 
-        if (pthread_rwlock_rdlock(&bucket->lock) != 0) {
+        if (!fair_rwlock_rdlock(&bucket->lock)) {
             return NULL;
         }
 
         for (row_index = 0; row_index < bucket->size; row_index++) {
             if (bucket->rows[row_index]->id == id) {
                 Record *record = bucket->rows[row_index];
-                pthread_rwlock_unlock(&bucket->lock);
+                fair_rwlock_unlock_read(&bucket->lock);
                 return record;
             }
         }
 
-        pthread_rwlock_unlock(&bucket->lock);
+        fair_rwlock_unlock_read(&bucket->lock);
     }
 
     return NULL;

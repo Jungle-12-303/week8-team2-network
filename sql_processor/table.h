@@ -23,8 +23,18 @@ typedef enum TableComparison {
     TABLE_COMPARISON_GE
 } TableComparison;
 
+typedef struct FairRWLock {
+    pthread_mutex_t mutex;
+    pthread_cond_t readers_ok;
+    pthread_cond_t writers_ok;
+    size_t active_readers;
+    size_t waiting_writers;
+    int active_writer;
+    int initialized;
+} FairRWLock;
+
 typedef struct TableBucket {
-    pthread_rwlock_t lock;
+    FairRWLock lock;
     Record **rows;
     size_t size;
     size_t capacity;
