@@ -24,7 +24,7 @@ assert_ok() {
 wait_for_server() {
     if curl -sS -X POST "http://localhost:${PORT}/query" \
         -H "Content-Type: text/plain" \
-        --data-raw "SELECT * FROM users;" >/dev/null 2>&1; then
+        --data-raw "SELECT * FROM users WHERE id = 1;" >/dev/null 2>&1; then
         return 0
     fi
 
@@ -43,7 +43,7 @@ for i in 1 2; do
 
     curl -sS -X POST "http://localhost:${PORT}/query" \
         -H "Content-Type: text/plain" \
-        --data-raw "SELECT * FROM users;" >"$select_file" &
+        --data-raw "SELECT * FROM users WHERE id = 1;" >"$select_file" &
 
     curl -sS -X POST "http://localhost:${PORT}/query" \
         -H "Content-Type: text/plain" \

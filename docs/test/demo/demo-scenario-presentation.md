@@ -4,7 +4,7 @@
 핵심은 3단계입니다.
 
 1. 내부 DB 엔진과 API 서버가 연결되는지 보여준다.
-2. 짧은 동시성 스모크 테스트로 `SELECT`와 `INSERT`의 read lock / write lock 동작을 확인한다. 이 단계는 1단계에서 띄운 서버를 그대로 재사용한다.
+2. 짧은 동시성 스모크 테스트로 `SELECT`와 `INSERT`의 read lock / write lock 동작을 확인한다. 이 단계는 1단계에서 띄운 서버를 그대로 재사용하며, 전체 스캔 대신 대표 row 조회로 빠르게 끝낸다.
 3. API 서버의 thread pool, job queue, 503 제어를 보여준다.
 
 ## 실행 방법
@@ -73,6 +73,7 @@ rwlock quick demo test passed.
 - `INSERT`는 write lock을 잡는다.
 - 읽기 요청은 동시에 가능하다.
 - 쓰기 요청은 배타적으로 처리된다.
+- 이 시나리오는 `SELECT *` 전체 스캔이 아니라 `SELECT * WHERE id = 1`처럼 가벼운 읽기로 짧게 확인한다.
 
 즉, 긴 스트레스가 아니라도 “읽기와 쓰기가 동시에 들어와도 서버가 안전하게 동작한다”는 점을 짧게 확인할 수 있습니다.
 
