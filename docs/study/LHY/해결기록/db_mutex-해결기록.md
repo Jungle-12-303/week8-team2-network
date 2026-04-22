@@ -77,6 +77,97 @@ DB 내용이 바뀌는 순간을 안전하게 지켜야 하기 때문이다.
 
 즉, `rwlock`은 "쓰는 동안은 읽지 않고, 읽는 동안은 쓰지 않는" 규칙을 더 정교하게 구현한 락이라고 보면 된다.
 
+### rwlock은 구체적으로 어떻게 동작하나
+
+`rwlock`은 읽기와 쓰기를 분리해서 제어하는 락이다.
+
+핵심 규칙은 아래와 같다.
+
+- 읽기 락은 여러 스레드가 동시에 잡을 수 있다
+- 쓰기 락은 오직 하나만 잡을 수 있다
+- 쓰기 락이 잡혀 있으면 읽기 락도 못 잡는다
+- 읽기 락이 하나라도 잡혀 있으면 쓰기 락은 기다려야 한다
+
+즉, 읽기 요청끼리는 같이 들어갈 수 있지만, 쓰기 요청은 혼자만 들어간다.
+그리고 쓰기가 시작되면 그 순간부터는 읽기도 멈춘다.
+
+쉽게 말하면:
+
+- `mutex`는 방을 한 사람만 쓰는 구조
+- `rwlock`은 읽는 사람은 여러 명 같이 들어가도 되고, 쓰는 사람은 혼자 들어가야 하는 구조
+
+이 프로젝트에서는 `SELECT`가 read lock, `INSERT`가 write lock을 사용한다.
+그래서 `SELECT`끼리는 동시에 처리될 수 있고, `INSERT`는 다른 읽기/쓰기 요청을 잠깐 멈추게 만든다.
+
+정리하면, `rwlock`은 `읽는 동안에는 쓰지 않고, 쓰는 동안에는 읽지 않는` 규칙을 더 세밀하게 구현한 락이다.
+
+### 시각적으로 보면
+
+`rwlock`은 `공유락(shared lock)`과 `배타락(exclusive lock)`으로 이해하면 쉽다.
+
+- 공유락 = 읽기 락, 여러 스레드가 같이 잡을 수 있음
+- 배타락 = 쓰기 락, 한 스레드만 잡을 수 있음
+
+#### 읽기 락이 걸린 경우
+
+읽기 요청은 서로 공유할 수 있다.
+
+```mermaid
+sequenceDiagram
+    participant A as Reader A
+    participant B as Reader B
+    participant C as Reader C
+    participant L as rwlock
+
+    A->>L: read lock 요청
+    L-->>A: 허용
+    B->>L: read lock 요청
+    L-->>B: 허용
+    C->>L: read lock 요청
+    L-->>C: 허용
+    A->>A: SELECT 실행
+    B->>B: SELECT 실행
+    C->>C: SELECT 실행
+    A->>L: unlock
+    B->>L: unlock
+    C->>L: unlock
+```
+
+즉, 읽기 락은 "같이 읽어도 되는 상태"를 만드는 락이다.
+같은 데이터를 보는 사람끼리는 서로 방해하지 않으므로 동시에 처리할 수 있다.
+
+#### 쓰기 락이 걸린 경우
+
+쓰기 요청은 배타적으로 들어간다.
+
+```mermaid
+sequenceDiagram
+    participant W as Writer
+    participant R1 as Reader 1
+    participant R2 as Reader 2
+    participant L as rwlock
+
+    W->>L: write lock 요청
+    L-->>W: 허용
+    R1->>L: read lock 요청
+    L-->>R1: 대기
+    R2->>L: read lock 요청
+    L-->>R2: 대기
+    W->>W: INSERT 실행
+    W->>L: unlock
+    L-->>R1: 허용
+    L-->>R2: 허용
+```
+
+즉, 쓰기 락은 "데이터를 바꾸는 사람만 혼자 들어가는 상태"를 만든다.
+데이터가 바뀌는 중간에 다른 스레드가 읽거나 쓰면 결과가 꼬일 수 있으므로, 이때는 완전히 독점해야 한다.
+
+#### 한 줄 요약
+
+- 공유락: 여러 읽기 요청이 함께 들어감
+- 배타락: 쓰기 요청 하나만 들어감
+- 읽기와 쓰기는 동시에 못 함
+
 ### 왜 병목이 되는가
 
 `db_mutex`는 단순히 테이블 접근만 막는 것이 아니라, `sql_execute()` 전체를 감싸고 있다.
