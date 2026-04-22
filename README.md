@@ -454,53 +454,6 @@ http_status + JSON body
 
 SQL 실행 결과는 C 구조체이지만, 클라이언트는 JSON을 받기 때문에 중간 변환 결과가 필요합니다.
 
-### 6-5. Table / Record / SQLResult
-
-```mermaid
-classDiagram
-    class Table {
-      next_id
-      buckets[16]
-    }
-
-    class TableBucket {
-      lock
-      rows
-      pk_index
-    }
-
-    class Record {
-      id
-      name
-      age
-    }
-
-    class SQLResult {
-      status
-      action
-      records
-      row_count
-    }
-
-    Table --> TableBucket
-    TableBucket --> Record
-    SQLResult --> Record
-```
-
-`Table`은 실제 `Record`를 소유하고, `SQLResult`는 조회된 `Record*` 목록을 응답 생성 단계까지 잠시 들고 있습니다.
-
-### 6-6. BPTree / BPTreeNode
-
-B+Tree는 `id -> Record*` 검색을 빠르게 하기 위한 인덱스입니다.
-
-```text
-internal node: 탐색 방향 결정
-leaf node: 실제 id와 Record* 저장
-next pointer: leaf 사이 연결
-```
-
-`WHERE id = ...` 조건에서는 전체 row를 훑지 않고 B+Tree를 통해 대상 record를 찾습니다.
-
 ---
 
 ## 7. 실제 실행 흐름
