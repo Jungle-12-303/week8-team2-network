@@ -33,6 +33,9 @@ test-unit:
 test-http:
 	sh scripts/http_integration_test.sh
 
-test: test-unit test-http
+test-rwlock:
+	sh scripts/rwlock_stress_test.sh
 
-.PHONY: all clean test-unit test-http test
+test: test-unit test-http test-rwlock
+
+.PHONY: all clean test-unit test-http test-rwlock test

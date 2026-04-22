@@ -1,23 +1,25 @@
 # 테스트 데모 안내
 
-이 폴더는 현재 구현되어 있는 테스트를 사람이 직접 따라 해 볼 수 있게 설명하는 곳입니다.
+이 폴더에는 서버를 직접 돌리면서 확인하는 테스트 문서를 모아둔다.
 
-## 현재 있는 테스트
+## 현재 문서
 
 - [단위 테스트](unit-tests.md)
-- [HTTP 스모크 테스트와 수동 확인](http-smoke-test.md)
+- [HTTP 스모크 테스트](http-smoke-test.md)
 - [HTTP 통합 테스트](http-integration-test.md)
 - [수동 쿼리 확인](manual-query.md)
+- [rwlock 수동 테스트](rwlock-test.md)
 
-## 원칙
+## 사용 원칙
 
-- 이 폴더에는 실제로 실행 가능한 테스트만 적는다
-- 아직 구현하지 않은 테스트는 `docs/plan/generated/` 쪽에만 둔다
-- 각 문서는 하나의 테스트 종류만 다룬다
+- 실제로 실행 가능한 테스트만 둔다.
+- 아직 구현되지 않은 테스트는 `docs/plan/generated/`로 분리한다.
+- 실패 경로와 정상 경로를 둘 다 확인한다.
 
-## 현재 상태 한 줄 요약
+## 현재 상태 요약
 
-- `sql_processor/unit_test.c`는 이미 구현되어 있다
-- `scripts/smoke_test.sh`는 이미 구현되어 있다
-- `scripts/http_integration_test.sh`는 이미 구현되어 있다
-- `scripts/manual_query.sh`는 이미 구현되어 있다
+- `sql_processor/unit_test.c`는 구현되어 있다.
+- `scripts/smoke_test.sh`는 구현되어 있다.
+- `scripts/http_integration_test.sh`는 구현되어 있다.
+- `scripts/manual_query.sh`는 구현되어 있다.
+- `scripts/rwlock_stress_test.sh`는 구현되어 있다.

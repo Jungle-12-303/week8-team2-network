@@ -11,7 +11,7 @@ typedef struct ApiResult {
     char *body;
 } ApiResult;
 
-int api_handle_query(Table *table, pthread_mutex_t *db_mutex, const char *sql, ApiResult *result);
+int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, ApiResult *result);
 void api_result_destroy(ApiResult *result);
 
 #endif
