@@ -106,3 +106,9 @@ review에서 가장 위험하게 지적된 부분이 바로 이 매핑입니다.
 - 서버에 필요한 보조 변환은 API 계층에서 처리합니다.
 - 기존 `main.c` REPL은 디버깅용으로 유지할 수 있습니다.
 - 기존 `unit_test`, `perf_test`, `condition_perf_test`는 계속 빌드되고 실행되어야 합니다.
+## Implementation update
+
+- The server now parses SQL before acquiring the DB lock.
+- Only the parsed `table_*` execution phase runs inside the critical section.
+- `sql_execute_plan()` handles the parsed command after the server has already decided the lock mode.
+- This keeps query parsing and error formatting outside the lock window.

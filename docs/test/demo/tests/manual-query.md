@@ -4,7 +4,7 @@
 
 ## 무엇을 테스트하나
 
-`scripts/manual_query.sh`는 다음 흐름을 확인하기 위한 수동 도구입니다.
+`scripts/tests/http/manual-query.sh`는 다음 흐름을 확인하기 위한 수동 도구입니다.
 
 - 서버가 이미 떠 있는지 확인한다
 - 사용자가 입력한 SQL을 그대로 `/query`로 보낸다
@@ -52,7 +52,7 @@ docker compose up --build
 대화형으로 실행:
 
 ```bash
-sh scripts/manual_query.sh 8080
+sh scripts/tests/http/manual-query.sh 8080
 ```
 
 그다음 아래처럼 직접 입력한다.
@@ -73,8 +73,8 @@ SELECT * FROM users WHERE age <= 20;
 ### 3) 한 번에 한 쿼리만 실행
 
 ```bash
-sh scripts/manual_query.sh 8080 "INSERT INTO users VALUES ('Bob', 30);"
-sh scripts/manual_query.sh 8080 "SELECT * FROM users WHERE id = 1;"
+sh scripts/tests/http/manual-query.sh 8080 "INSERT INTO users VALUES ('Bob', 30);"
+sh scripts/tests/http/manual-query.sh 8080 "SELECT * FROM users WHERE id = 1;"
 ```
 
 ## 기대 결과
@@ -93,6 +93,6 @@ sh scripts/manual_query.sh 8080 "SELECT * FROM users WHERE id = 1;"
 
 ## 같이 보면 좋은 파일
 
-- [scripts/manual_query.sh](../../../scripts/manual_query.sh)
-- [scripts/smoke_test.sh](../../../scripts/smoke_test.sh)
-- [scripts/http_integration_test.sh](../../../scripts/http_integration_test.sh)
+- [scripts/tests/http/manual-query.sh](../../../scripts/tests/http/manual-query.sh)
+- [scripts/tests/http/smoke-test.sh](../../../scripts/tests/http/smoke-test.sh)
+- [scripts/tests/http/integration-test.sh](../../../scripts/tests/http/integration-test.sh)

@@ -42,3 +42,9 @@
 - 테이블 구조 자체가 읽기 전용 캐시가 아니므로, `SELECT`와 `INSERT`가 같은 시점에 충돌하지 않도록 반드시 `rwlock`을 거쳐야 한다.
 - 향후 `UPDATE` / `DELETE`를 넣게 되면 쓰기 락 범주로 함께 묶어야 한다.
 
+## Implementation update
+
+- SQL parsing now happens before `db_lock` is acquired.
+- `db_lock` is held only while the parsed plan touches `table_*`.
+- Lock mode is derived from the parsed command object instead of re-scanning the raw SQL string.
+- This shortens the critical section and keeps syntax checking and error formatting outside the lock.

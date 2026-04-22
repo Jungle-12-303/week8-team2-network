@@ -28,6 +28,37 @@ typedef enum SQLLockMode {
     SQL_LOCK_WRITE
 } SQLLockMode;
 
+typedef enum SQLCommandType {
+    SQL_COMMAND_NONE,
+    SQL_COMMAND_INSERT,
+    SQL_COMMAND_SELECT_ALL,
+    SQL_COMMAND_SELECT_BY_ID,
+    SQL_COMMAND_SELECT_BY_NAME,
+    SQL_COMMAND_SELECT_BY_AGE,
+    SQL_COMMAND_EXIT
+} SQLCommandType;
+
+typedef struct SQLCommand {
+    SQLCommandType type;
+    TableComparison comparison;
+    char table_name[32];
+    char name[RECORD_NAME_SIZE];
+    char selected_column[32];
+    char where_column[32];
+    char text_value[RECORD_NAME_SIZE];
+    int int_value;
+    int has_where;
+} SQLCommand;
+
+typedef struct SQLParseResult {
+    int parsed;
+    SQLCommand command;
+    SQLStatus status;
+    int error_code;
+    char sql_state[SQL_SQLSTATE_SIZE];
+    char error_message[SQL_ERROR_MESSAGE_SIZE];
+} SQLParseResult;
+
 typedef struct SQLResult {
     SQLStatus status;
     SQLAction action;
@@ -39,6 +70,15 @@ typedef struct SQLResult {
     char sql_state[SQL_SQLSTATE_SIZE];
     char error_message[SQL_ERROR_MESSAGE_SIZE];
 } SQLResult;
+
+/* Parses one SQL statement into a command object. */
+int sql_parse(const char *input, SQLParseResult *result);
+
+/* Returns the lock mode required for a parsed SQL command. */
+SQLLockMode sql_command_lock_mode(const SQLCommand *command);
+
+/* Executes a parsed SQL command against the table. */
+SQLResult sql_execute_plan(Table *table, const SQLCommand *command);
 
 /* Parses one SQL statement and executes it against the table. */
 SQLResult sql_execute(Table *table, const char *input);

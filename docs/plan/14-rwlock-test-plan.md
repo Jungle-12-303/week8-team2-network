@@ -85,3 +85,9 @@ sh scripts/rwlock_stress_test.sh
 - `SELECT`와 `INSERT`가 각각 read lock / write lock을 타는지 확인한다.
 - JSON 응답이 락 안에서 만들어지지 않도록 했는지 확인한다.
 
+## Implementation update
+
+- Add a unit-level check that `sql_parse()` classifies commands before any DB lock is needed.
+- Verify `sql_command_lock_mode()` returns read/write/none from the parsed command object.
+- Keep the existing concurrency stress test, but treat it as a DB lock correctness check rather than a full latency benchmark.
+- Add a follow-up test case for slow request handling if the team wants to validate lock hold time under blocking clients.

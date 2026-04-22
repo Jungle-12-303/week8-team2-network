@@ -4,7 +4,7 @@
 
 ## 무엇을 테스트하나
 
-`scripts/http_integration_test.sh`는 다음을 한 번에 확인합니다.
+`scripts/tests/http/integration-test.sh`는 다음을 한 번에 확인합니다.
 
 - Docker 이미지를 빌드할 수 있는지
 - 임시 컨테이너가 정상적으로 뜨는지
@@ -19,7 +19,7 @@
 프로젝트 루트에서 실행합니다.
 
 ```bash
-sh scripts/http_integration_test.sh
+sh scripts/tests/http/integration-test.sh
 ```
 
 스크립트는 실행 환경에 따라 자동으로 모드를 고릅니다.
@@ -60,6 +60,8 @@ HTTP integration tests passed.
 
 ## 같이 보면 좋은 파일
 
-- [scripts/http_integration_test.sh](../../../scripts/http_integration_test.sh)
+- [scripts/tests/http/integration-test.sh](../../../scripts/tests/http/integration-test.sh)
+- [scripts/tests/http/protocol-edge-cases.sh](../../../scripts/tests/http/protocol-edge-cases.sh)
 - [Makefile](../../../Makefile)
 - [docs/plan/generated/http-integration-test-plan.md](../../../docs/plan/generated/http-integration-test-plan.md)
+- [http-protocol-edge-cases.md](http-protocol-edge-cases.md)

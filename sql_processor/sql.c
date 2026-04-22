@@ -61,34 +61,6 @@ static void sql_build_near_excerpt(const char *cursor, char *buffer, size_t buff
     }
 }
 
-static void sql_set_syntax_error(SQLResult *result, const char *cursor) {
-    char near_excerpt[64];
-
-    sql_build_near_excerpt(cursor, near_excerpt, sizeof(near_excerpt));
-    result->status = SQL_STATUS_SYNTAX_ERROR;
-    result->error_code = 1064;
-    snprintf(result->sql_state, sizeof(result->sql_state), "42000");
-    snprintf(
-        result->error_message,
-        sizeof(result->error_message),
-        "ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your sql processor2 version for the right syntax to use near '%s' at line 1",
-        near_excerpt
-    );
-}
-
-static void sql_set_unknown_column_error(SQLResult *result, const char *column, const char *clause_name) {
-    result->status = SQL_STATUS_QUERY_ERROR;
-    result->error_code = 1054;
-    snprintf(result->sql_state, sizeof(result->sql_state), "42S22");
-    snprintf(
-        result->error_message,
-        sizeof(result->error_message),
-        "ERROR 1054 (42S22): Unknown column '%s' in '%s'",
-        column,
-        clause_name
-    );
-}
-
 /* Skips whitespace characters in the parser cursor. */
 static void sql_skip_spaces(const char **cursor) {
     while (**cursor != '\0' && isspace((unsigned char)**cursor)) {
@@ -283,75 +255,330 @@ static int sql_match_statement_end(const char **cursor) {
     return **cursor == '\0';
 }
 
-/* Parses and executes the fixed INSERT syntax. */
-static SQLResult sql_execute_insert(Table *table, const char *input) {
-    SQLResult result = sql_make_result(SQL_STATUS_SYNTAX_ERROR, SQL_ACTION_NONE);
+static void sql_parse_result_init(SQLParseResult *result) {
+    if (result == NULL) {
+        return;
+    }
+
+    result->parsed = 0;
+    result->command.type = SQL_COMMAND_NONE;
+    result->command.comparison = TABLE_COMPARISON_EQ;
+    result->command.table_name[0] = '\0';
+    result->command.name[0] = '\0';
+    result->command.selected_column[0] = '\0';
+    result->command.where_column[0] = '\0';
+    result->command.text_value[0] = '\0';
+    result->command.int_value = 0;
+    result->command.has_where = 0;
+    result->status = SQL_STATUS_SYNTAX_ERROR;
+    result->error_code = 0;
+    result->sql_state[0] = '\0';
+    result->error_message[0] = '\0';
+}
+
+static void sql_parse_result_set_error(SQLParseResult *result, SQLStatus status, int error_code, const char *sql_state, const char *message) {
+    if (result == NULL) {
+        return;
+    }
+
+    result->parsed = 0;
+    result->command.type = SQL_COMMAND_NONE;
+    result->status = status;
+    result->error_code = error_code;
+    snprintf(result->sql_state, sizeof(result->sql_state), "%s", sql_state);
+    snprintf(result->error_message, sizeof(result->error_message), "%s", message);
+}
+
+static void sql_parse_set_syntax_error(SQLParseResult *result, const char *cursor) {
+    char near_excerpt[64];
+
+    sql_build_near_excerpt(cursor, near_excerpt, sizeof(near_excerpt));
+    sql_parse_result_set_error(
+        result,
+        SQL_STATUS_SYNTAX_ERROR,
+        1064,
+        "42000",
+        ""
+    );
+
+    if (result != NULL) {
+        snprintf(
+            result->error_message,
+            sizeof(result->error_message),
+            "ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your sql processor2 version for the right syntax to use near '%s' at line 1",
+            near_excerpt
+        );
+    }
+}
+
+static void sql_parse_set_unknown_column_error(SQLParseResult *result, const char *column, const char *clause_name) {
+    sql_parse_result_set_error(
+        result,
+        SQL_STATUS_QUERY_ERROR,
+        1054,
+        "42S22",
+        ""
+    );
+
+    if (result != NULL) {
+        snprintf(
+            result->error_message,
+            sizeof(result->error_message),
+            "ERROR 1054 (42S22): Unknown column '%s' in '%s'",
+            column,
+            clause_name
+        );
+    }
+}
+
+static void sql_parse_insert(const char *input, SQLParseResult *result) {
     const char *cursor = input;
     char table_name[32];
-    char name[RECORD_NAME_SIZE];
-    int age;
-    Record *record;
 
     if (!sql_match_keyword(&cursor, "INSERT")) {
-        return result;
+        return;
     }
 
     sql_skip_spaces(&cursor);
     if (!sql_match_keyword(&cursor, "INTO")) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
+        sql_parse_set_syntax_error(result, cursor);
+        return;
     }
 
     if (!sql_parse_identifier(&cursor, table_name, sizeof(table_name))) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
+        sql_parse_set_syntax_error(result, cursor);
+        return;
     }
 
     if (strcasecmp(table_name, "users") != 0) {
-        sql_set_syntax_error(&result, table_name);
-        return result;
+        sql_parse_set_syntax_error(result, table_name);
+        return;
     }
 
     sql_skip_spaces(&cursor);
     if (!sql_match_keyword(&cursor, "VALUES")) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
+        sql_parse_set_syntax_error(result, cursor);
+        return;
     }
 
     if (!sql_match_char(&cursor, '(')) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
+        sql_parse_set_syntax_error(result, cursor);
+        return;
     }
 
-    if (!sql_parse_string(&cursor, name, sizeof(name))) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
+    if (!sql_parse_string(&cursor, result->command.name, sizeof(result->command.name))) {
+        sql_parse_set_syntax_error(result, cursor);
+        return;
     }
 
     if (!sql_match_char(&cursor, ',')) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
+        sql_parse_set_syntax_error(result, cursor);
+        return;
     }
 
-    if (!sql_parse_int(&cursor, &age)) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
+    if (!sql_parse_int(&cursor, &result->command.int_value)) {
+        sql_parse_set_syntax_error(result, cursor);
+        return;
     }
 
     if (!sql_match_char(&cursor, ')')) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
+        sql_parse_set_syntax_error(result, cursor);
+        return;
     }
 
     if (!sql_match_statement_end(&cursor)) {
-        sql_set_syntax_error(&result, cursor);
+        sql_parse_set_syntax_error(result, cursor);
+        return;
+    }
+
+    snprintf(result->command.table_name, sizeof(result->command.table_name), "%s", table_name);
+    result->command.type = SQL_COMMAND_INSERT;
+    result->parsed = 1;
+    result->status = SQL_STATUS_OK;
+}
+
+static void sql_parse_select(const char *input, SQLParseResult *result) {
+    const char *cursor = input;
+    char table_name[32];
+    char column[32];
+    char selected_column[32];
+    const char *comparison_cursor;
+
+    if (!sql_match_keyword(&cursor, "SELECT")) {
+        return;
+    }
+
+    sql_skip_spaces(&cursor);
+    if (!sql_match_char(&cursor, '*')) {
+        if (!sql_parse_identifier(&cursor, selected_column, sizeof(selected_column))) {
+            sql_parse_set_syntax_error(result, cursor);
+            return;
+        }
+
+        if (!sql_is_known_column(selected_column)) {
+            sql_parse_set_unknown_column_error(result, selected_column, "field list");
+            return;
+        }
+
+        sql_parse_set_syntax_error(result, cursor);
+        return;
+    }
+
+    sql_skip_spaces(&cursor);
+    if (!sql_match_keyword(&cursor, "FROM")) {
+        sql_parse_set_syntax_error(result, cursor);
+        return;
+    }
+
+    if (!sql_parse_identifier(&cursor, table_name, sizeof(table_name))) {
+        sql_parse_set_syntax_error(result, cursor);
+        return;
+    }
+
+    if (strcasecmp(table_name, "users") != 0) {
+        sql_parse_set_syntax_error(result, table_name);
+        return;
+    }
+
+    sql_skip_spaces(&cursor);
+    if (sql_match_statement_end(&cursor)) {
+        snprintf(result->command.table_name, sizeof(result->command.table_name), "%s", table_name);
+        result->command.type = SQL_COMMAND_SELECT_ALL;
+        result->parsed = 1;
+        result->status = SQL_STATUS_OK;
+        return;
+    }
+
+    if (!sql_match_keyword(&cursor, "WHERE")) {
+        sql_parse_set_syntax_error(result, cursor);
+        return;
+    }
+
+    if (!sql_parse_identifier(&cursor, column, sizeof(column))) {
+        sql_parse_set_syntax_error(result, cursor);
+        return;
+    }
+
+    comparison_cursor = cursor;
+    if (!sql_parse_comparison(&cursor, &result->command.comparison)) {
+        sql_parse_set_syntax_error(result, cursor);
+        return;
+    }
+
+    snprintf(result->command.table_name, sizeof(result->command.table_name), "%s", table_name);
+    snprintf(result->command.where_column, sizeof(result->command.where_column), "%s", column);
+    result->command.has_where = 1;
+
+    if (strcasecmp(column, "id") == 0) {
+        if (!sql_parse_int(&cursor, &result->command.int_value) || !sql_match_statement_end(&cursor)) {
+            sql_parse_set_syntax_error(result, cursor);
+            return;
+        }
+
+        result->command.type = SQL_COMMAND_SELECT_BY_ID;
+    } else if (strcasecmp(column, "name") == 0) {
+        if (result->command.comparison != TABLE_COMPARISON_EQ) {
+            sql_parse_set_syntax_error(result, comparison_cursor);
+            return;
+        }
+
+        if (!sql_parse_string(&cursor, result->command.text_value, sizeof(result->command.text_value)) || !sql_match_statement_end(&cursor)) {
+            sql_parse_set_syntax_error(result, cursor);
+            return;
+        }
+
+        result->command.type = SQL_COMMAND_SELECT_BY_NAME;
+    } else if (strcasecmp(column, "age") == 0) {
+        if (!sql_parse_int(&cursor, &result->command.int_value) || !sql_match_statement_end(&cursor)) {
+            sql_parse_set_syntax_error(result, cursor);
+            return;
+        }
+
+        result->command.type = SQL_COMMAND_SELECT_BY_AGE;
+    } else {
+        sql_parse_set_unknown_column_error(result, column, "where clause");
+        return;
+    }
+
+    result->parsed = 1;
+    result->status = SQL_STATUS_OK;
+}
+
+/* Parses one SQL statement into a command object. */
+int sql_parse(const char *input, SQLParseResult *result) {
+    const char *cursor;
+
+    if (result == NULL) {
+        return 0;
+    }
+
+    sql_parse_result_init(result);
+
+    if (input == NULL) {
+        sql_parse_result_set_error(result, SQL_STATUS_ERROR, 0, "", "Internal database error");
+        return 0;
+    }
+
+    cursor = input;
+    sql_skip_spaces(&cursor);
+
+    if (sql_match_keyword(&cursor, "EXIT") || sql_match_keyword(&cursor, "QUIT")) {
+        if (sql_match_statement_end(&cursor)) {
+            result->command.type = SQL_COMMAND_EXIT;
+            result->parsed = 1;
+            result->status = SQL_STATUS_EXIT;
+            return 1;
+        }
+
+        sql_parse_set_syntax_error(result, cursor);
+        return 0;
+    }
+
+    sql_parse_insert(input, result);
+    if (result->parsed || result->error_message[0] != '\0') {
+        return result->parsed;
+    }
+
+    sql_parse_select(input, result);
+    if (result->parsed || result->error_message[0] != '\0') {
+        return result->parsed;
+    }
+
+    sql_parse_set_syntax_error(result, cursor);
+    return 0;
+}
+
+/* Returns the lock mode required for a parsed SQL command. */
+SQLLockMode sql_command_lock_mode(const SQLCommand *command) {
+    if (command == NULL) {
+        return SQL_LOCK_NONE;
+    }
+
+    switch (command->type) {
+        case SQL_COMMAND_INSERT:
+            return SQL_LOCK_WRITE;
+        case SQL_COMMAND_SELECT_ALL:
+        case SQL_COMMAND_SELECT_BY_ID:
+        case SQL_COMMAND_SELECT_BY_NAME:
+        case SQL_COMMAND_SELECT_BY_AGE:
+            return SQL_LOCK_READ;
+        case SQL_COMMAND_EXIT:
+        case SQL_COMMAND_NONE:
+        default:
+            return SQL_LOCK_NONE;
+    }
+}
+
+static SQLResult sql_execute_insert_plan(Table *table, const SQLCommand *command) {
+    SQLResult result = sql_make_result(SQL_STATUS_ERROR, SQL_ACTION_NONE);
+    Record *record;
+
+    if (table == NULL || command == NULL || command->type != SQL_COMMAND_INSERT) {
         return result;
     }
 
-    record = table_insert(table, name, age);
-
+    record = table_insert(table, command->name, command->int_value);
     if (record == NULL) {
-        result.status = SQL_STATUS_ERROR;
         return result;
     }
 
@@ -363,123 +590,36 @@ static SQLResult sql_execute_insert(Table *table, const char *input) {
     return result;
 }
 
-/* Parses and executes the fixed SELECT syntax. */
-static SQLResult sql_execute_select(Table *table, const char *input) {
-    SQLResult result = sql_make_result(SQL_STATUS_SYNTAX_ERROR, SQL_ACTION_NONE);
-    const char *cursor = input;
-    char table_name[32];
-    char column[32];
-    char selected_column[32];
-    char text_value[RECORD_NAME_SIZE];
-    int int_value;
-    TableComparison comparison;
-    const char *comparison_cursor;
-    const char *select_list_cursor;
+static SQLResult sql_execute_select_plan(Table *table, const SQLCommand *command) {
+    SQLResult result = sql_make_result(SQL_STATUS_ERROR, SQL_ACTION_NONE);
 
-    if (!sql_match_keyword(&cursor, "SELECT")) {
+    if (table == NULL || command == NULL) {
         return result;
     }
 
-    sql_skip_spaces(&cursor);
-    select_list_cursor = cursor;
-    if (!sql_match_char(&cursor, '*')) {
-        if (!sql_parse_identifier(&cursor, selected_column, sizeof(selected_column))) {
-            sql_set_syntax_error(&result, cursor);
+    switch (command->type) {
+        case SQL_COMMAND_SELECT_ALL:
+            if (!table_collect_all(table, &result.records, &result.row_count)) {
+                return result;
+            }
+            break;
+        case SQL_COMMAND_SELECT_BY_ID:
+            if (!table_find_by_id_condition(table, command->comparison, command->int_value, &result.records, &result.row_count)) {
+                return result;
+            }
+            break;
+        case SQL_COMMAND_SELECT_BY_NAME:
+            if (!table_find_by_name_matches(table, command->text_value, &result.records, &result.row_count)) {
+                return result;
+            }
+            break;
+        case SQL_COMMAND_SELECT_BY_AGE:
+            if (!table_find_by_age_condition(table, command->comparison, command->int_value, &result.records, &result.row_count)) {
+                return result;
+            }
+            break;
+        default:
             return result;
-        }
-
-        if (!sql_is_known_column(selected_column)) {
-            sql_set_unknown_column_error(&result, selected_column, "field list");
-            return result;
-        }
-
-        sql_set_syntax_error(&result, select_list_cursor);
-        return result;
-    }
-
-    sql_skip_spaces(&cursor);
-    if (!sql_match_keyword(&cursor, "FROM")) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
-    }
-
-    if (!sql_parse_identifier(&cursor, table_name, sizeof(table_name))) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
-    }
-
-    if (strcasecmp(table_name, "users") != 0) {
-        sql_set_syntax_error(&result, table_name);
-        return result;
-    }
-
-    sql_skip_spaces(&cursor);
-    if (sql_match_statement_end(&cursor)) {
-        if (!table_collect_all(table, &result.records, &result.row_count)) {
-            result.status = SQL_STATUS_ERROR;
-            return result;
-        }
-
-        result.status = SQL_STATUS_OK;
-        result.action = SQL_ACTION_SELECT_ROWS;
-        result.record = (result.row_count > 0) ? result.records[0] : NULL;
-        return result;
-    }
-
-    if (!sql_match_keyword(&cursor, "WHERE")) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
-    }
-
-    if (!sql_parse_identifier(&cursor, column, sizeof(column))) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
-    }
-
-    comparison_cursor = cursor;
-    if (!sql_parse_comparison(&cursor, &comparison)) {
-        sql_set_syntax_error(&result, cursor);
-        return result;
-    }
-
-    if (strcasecmp(column, "id") == 0) {
-        if (!sql_parse_int(&cursor, &int_value) || !sql_match_statement_end(&cursor)) {
-            sql_set_syntax_error(&result, cursor);
-            return result;
-        }
-
-        if (!table_find_by_id_condition(table, comparison, int_value, &result.records, &result.row_count)) {
-            result.status = SQL_STATUS_ERROR;
-            return result;
-        }
-    } else if (strcasecmp(column, "name") == 0) {
-        if (comparison != TABLE_COMPARISON_EQ) {
-            sql_set_syntax_error(&result, comparison_cursor);
-            return result;
-        }
-
-        if (!sql_parse_string(&cursor, text_value, sizeof(text_value)) || !sql_match_statement_end(&cursor)) {
-            sql_set_syntax_error(&result, cursor);
-            return result;
-        }
-
-        if (!table_find_by_name_matches(table, text_value, &result.records, &result.row_count)) {
-            result.status = SQL_STATUS_ERROR;
-            return result;
-        }
-    } else if (strcasecmp(column, "age") == 0) {
-        if (!sql_parse_int(&cursor, &int_value) || !sql_match_statement_end(&cursor)) {
-            sql_set_syntax_error(&result, cursor);
-            return result;
-        }
-
-        if (!table_find_by_age_condition(table, comparison, int_value, &result.records, &result.row_count)) {
-            result.status = SQL_STATUS_ERROR;
-            return result;
-        }
-    } else {
-        sql_set_unknown_column_error(&result, column, "where clause");
-        return result;
     }
 
     result.record = (result.row_count > 0) ? result.records[0] : NULL;
@@ -488,36 +628,46 @@ static SQLResult sql_execute_select(Table *table, const char *input) {
     return result;
 }
 
+/* Executes a parsed SQL command against the table. */
+SQLResult sql_execute_plan(Table *table, const SQLCommand *command) {
+    if (command == NULL) {
+        return sql_make_result(SQL_STATUS_ERROR, SQL_ACTION_NONE);
+    }
+
+    switch (command->type) {
+        case SQL_COMMAND_INSERT:
+            return sql_execute_insert_plan(table, command);
+        case SQL_COMMAND_SELECT_ALL:
+        case SQL_COMMAND_SELECT_BY_ID:
+        case SQL_COMMAND_SELECT_BY_NAME:
+        case SQL_COMMAND_SELECT_BY_AGE:
+            return sql_execute_select_plan(table, command);
+        case SQL_COMMAND_EXIT: {
+            SQLResult result = sql_make_result(SQL_STATUS_EXIT, SQL_ACTION_NONE);
+            return result;
+        }
+        case SQL_COMMAND_NONE:
+        default:
+            return sql_make_result(SQL_STATUS_ERROR, SQL_ACTION_NONE);
+    }
+}
+
 /* Parses one SQL statement and executes it against the table. */
 SQLResult sql_execute(Table *table, const char *input) {
-    SQLResult result = sql_make_result(SQL_STATUS_SYNTAX_ERROR, SQL_ACTION_NONE);
-    const char *cursor;
+    SQLParseResult parse_result;
+    SQLResult result;
 
-    if (table == NULL || input == NULL) {
-        result.status = SQL_STATUS_ERROR;
+    if (!sql_parse(input, &parse_result)) {
+        result = sql_make_result(parse_result.status, SQL_ACTION_NONE);
+        result.error_code = parse_result.error_code;
+        snprintf(result.sql_state, sizeof(result.sql_state), "%s", parse_result.sql_state);
+        snprintf(result.error_message, sizeof(result.error_message), "%s", parse_result.error_message);
         return result;
     }
 
-    cursor = input;
-    sql_skip_spaces(&cursor);
-
-    if (sql_match_keyword(&cursor, "EXIT") || sql_match_keyword(&cursor, "QUIT")) {
-        if (sql_match_statement_end(&cursor)) {
-            result.status = SQL_STATUS_EXIT;
-        } else {
-            sql_set_syntax_error(&result, cursor);
-        }
-        return result;
-    }
-
-    result = sql_execute_insert(table, input);
-    if (result.status != SQL_STATUS_SYNTAX_ERROR || result.error_message[0] != '\0') {
-        return result;
-    }
-
-    result = sql_execute_select(table, input);
-    if (result.status == SQL_STATUS_SYNTAX_ERROR && result.error_message[0] == '\0') {
-        sql_set_syntax_error(&result, cursor);
+    result = sql_execute_plan(table, &parse_result.command);
+    if (parse_result.command.type == SQL_COMMAND_EXIT) {
+        result.status = SQL_STATUS_EXIT;
     }
     return result;
 }

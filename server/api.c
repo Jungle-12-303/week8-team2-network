@@ -2,6 +2,7 @@
 
 #include "json_util.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -106,6 +107,7 @@ static int api_build_error_response(const SQLResult *sql_result, JsonBuffer *buf
 }
 
 int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, ApiResult *result) {
+    SQLParseResult parse_result;
     SQLResult sql_result;
     JsonBuffer buffer;
     SQLLockMode lock_mode;
@@ -123,7 +125,60 @@ int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, A
         return 0;
     }
 
-    lock_mode = sql_determine_lock_mode(sql);
+    if (!sql_parse(sql, &parse_result)) {
+        if (!json_buffer_init(&buffer, 256)) {
+            return 0;
+        }
+
+        if (parse_result.status == SQL_STATUS_ERROR) {
+            ok = json_buffer_append(
+                &buffer,
+                "{\"ok\":false,\"status\":\"internal_error\",\"message\":\"Internal database error\"}"
+            );
+            result->http_status = 500;
+        } else {
+            SQLResult error_result = {0};
+
+            error_result.status = parse_result.status;
+            error_result.error_code = parse_result.error_code;
+            snprintf(error_result.sql_state, sizeof(error_result.sql_state), "%s", parse_result.sql_state);
+            snprintf(error_result.error_message, sizeof(error_result.error_message), "%s", parse_result.error_message);
+            ok = api_build_error_response(
+                &error_result,
+                &buffer
+            );
+            result->http_status = 200;
+        }
+
+        if (!ok) {
+            json_buffer_destroy(&buffer);
+            return 0;
+        }
+
+        result->body = json_buffer_detach(&buffer);
+        json_buffer_destroy(&buffer);
+        return result->body != NULL;
+    }
+
+    if (parse_result.command.type == SQL_COMMAND_EXIT) {
+        if (!json_buffer_init(&buffer, 256)) {
+            return 0;
+        }
+        ok = json_buffer_append(
+            &buffer,
+            "{\"ok\":false,\"status\":\"exit_not_supported\",\"message\":\"EXIT and QUIT are not supported over HTTP\"}"
+        );
+        result->http_status = 400;
+        if (!ok) {
+            json_buffer_destroy(&buffer);
+            return 0;
+        }
+        result->body = json_buffer_detach(&buffer);
+        json_buffer_destroy(&buffer);
+        return result->body != NULL;
+    }
+
+    lock_mode = sql_command_lock_mode(&parse_result.command);
     if (lock_mode == SQL_LOCK_READ) {
         if (pthread_rwlock_rdlock(db_lock) != 0) {
             return 0;
@@ -136,7 +191,7 @@ int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, A
         locked = 1;
     }
 
-    sql_result = sql_execute(table, sql);
+    sql_result = sql_execute_plan(table, &parse_result.command);
 
     if (locked) {
         pthread_rwlock_unlock(db_lock);
@@ -151,12 +206,6 @@ int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, A
     if (sql_result.status == SQL_STATUS_OK || sql_result.status == SQL_STATUS_NOT_FOUND) {
         ok = api_build_success_response(&sql_result, &buffer);
         result->http_status = 200;
-    } else if (sql_result.status == SQL_STATUS_EXIT) {
-        ok = json_buffer_append(
-            &buffer,
-            "{\"ok\":false,\"status\":\"exit_not_supported\",\"message\":\"EXIT and QUIT are not supported over HTTP\"}"
-        );
-        result->http_status = 400;
     } else if (sql_result.status == SQL_STATUS_ERROR) {
         ok = json_buffer_append(
             &buffer,

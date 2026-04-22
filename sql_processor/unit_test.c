@@ -331,6 +331,42 @@ static void test_sql_execution(void) {
     table_destroy(table);
 }
 
+/* Verifies SQL parsing and lock-mode classification are separated from execution. */
+static void test_sql_parse_and_execute_plan(void) {
+    SQLParseResult parse_result;
+    SQLResult exec_result;
+    Table *table = table_create();
+
+    assert(table != NULL);
+
+    assert(sql_parse("INSERT INTO users VALUES ('Alice', 20);", &parse_result) == 1);
+    assert(parse_result.parsed == 1);
+    assert(parse_result.command.type == SQL_COMMAND_INSERT);
+    assert(sql_command_lock_mode(&parse_result.command) == SQL_LOCK_WRITE);
+
+    exec_result = sql_execute_plan(table, &parse_result.command);
+    assert(exec_result.status == SQL_STATUS_OK);
+    assert(exec_result.action == SQL_ACTION_INSERT);
+    assert(exec_result.inserted_id == 1);
+    sql_result_destroy(&exec_result);
+
+    assert(sql_parse("SELECT * FROM users WHERE id = 1;", &parse_result) == 1);
+    assert(parse_result.parsed == 1);
+    assert(parse_result.command.type == SQL_COMMAND_SELECT_BY_ID);
+    assert(sql_command_lock_mode(&parse_result.command) == SQL_LOCK_READ);
+
+    exec_result = sql_execute_plan(table, &parse_result.command);
+    assert(exec_result.status == SQL_STATUS_OK);
+    assert_result_ids(&exec_result, (int[]){1}, 1);
+    sql_result_destroy(&exec_result);
+
+    assert(sql_parse("EXIT;", &parse_result) == 1);
+    assert(parse_result.command.type == SQL_COMMAND_EXIT);
+    assert(sql_command_lock_mode(&parse_result.command) == SQL_LOCK_NONE);
+
+    table_destroy(table);
+}
+
 static void test_sql_detailed_errors(void) {
     Table *table = table_create();
     SQLResult result;
@@ -374,6 +410,7 @@ int main(void) {
     test_table_linear_search_fields();
     test_table_condition_search();
     test_sql_execution();
+    test_sql_parse_and_execute_plan();
     test_sql_detailed_errors();
 
     printf("All unit tests passed.\n");

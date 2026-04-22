@@ -1,10 +1,10 @@
 # Unit Tests
 
-이 문서는 `sql_processor`의 단위 테스트를 사람이 직접 실행하고 확인하는 방법을 설명합니다.
+이 문서는 `scripts/tests/sql/unit-tests.sh`로 `sql_processor`의 단위 테스트를 실행하고 확인하는 방법을 설명합니다.
 
 ## 무엇을 테스트하나
 
-`sql_processor/unit_test.c`는 다음을 확인합니다.
+`scripts/tests/sql/unit-tests.sh`는 `sql_processor/unit_test.c`를 빌드하고 실행하면서 다음을 확인합니다.
 
 - 빈 B+Tree 검색
 - 단일 key insert/search
@@ -22,21 +22,19 @@
 
 ## 수동 실행 방법
 
-프로젝트 루트에서 아래 순서로 실행합니다.
+프로젝트 루트에서 아래 스크립트를 실행합니다.
 
 ```bash
-cd sql_processor
-make
-./unit_test
+sh scripts/tests/sql/unit-tests.sh
 ```
 
-프로젝트 루트에서 바로 한 번에 하려면 이렇게도 할 수 있습니다.
+루트 호환 스크립트를 쓰려면 아래도 가능합니다.
 
 ```bash
-cd sql_processor; make; ./unit_test
+sh scripts/unit-tests.sh
 ```
 
-PowerShell에서 현재 폴더가 이미 `sql_processor`라면 아래만 실행해도 됩니다.
+PowerShell에서 현재 폴더가 이미 `sql_processor`라면 아래처럼 직접 실행해도 되지만, 기록표를 채울 때는 위의 스크립트를 권장한다.
 
 ```bash
 make
@@ -66,6 +64,10 @@ All unit tests passed.
 - 빌드가 성공하는가
 - 실행이 끝까지 끝나는가
 - 마지막에 `All unit tests passed.`가 출력되는가
+
+## 같이 보면 좋은 파일
+
+- [scripts/tests/sql/unit-tests.sh](../../../scripts/tests/sql/unit-tests.sh)
 
 ## 실패했을 때 바로 볼 것
 

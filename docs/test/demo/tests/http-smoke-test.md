@@ -6,7 +6,7 @@
 
 현재 서버는 `POST /query` 하나를 제공합니다.
 
-`scripts/smoke_test.sh`는 이 흐름을 확인합니다.
+`scripts/tests/http/smoke-test.sh`는 이 흐름을 확인합니다.
 
 - `INSERT INTO users VALUES ('Bob', 20);`
 - `SELECT * FROM users WHERE id = <inserted_id>;`
@@ -53,7 +53,7 @@ Listening on port 8080
 서버가 켜진 상태에서 프로젝트 루트에서 실행합니다.
 
 ```bash
-sh scripts/smoke_test.sh
+sh scripts/tests/http/smoke-test.sh 8080
 ```
 
 ## 기대 결과
@@ -88,7 +88,7 @@ curl -v -X POST http://localhost:8080/query \
 ```bash
 curl -v -X POST http://localhost:8080/query \
   -H "Content-Type: text/plain" \
-  --data "SELECT * FROM users WHERE id = 1;"
+  --data "SELECT * FROM users WHERE id = <inserted_id>;"
 ```
 
 확인 포인트:
@@ -125,10 +125,12 @@ curl -v -X POST http://localhost:8080/unknown \
 
 ## 같이 보면 좋은 파일
 
-- [scripts/smoke_test.sh](../../../scripts/smoke_test.sh)
-- [scripts/manual_query.sh](../../../scripts/manual_query.sh)
+- [scripts/tests/http/smoke-test.sh](../../../scripts/tests/http/smoke-test.sh)
+- [scripts/tests/http/manual-query.sh](../../../scripts/tests/http/manual-query.sh)
+- [scripts/tests/http/protocol-edge-cases.sh](../../../scripts/tests/http/protocol-edge-cases.sh)
 - [docs/test/demo/manual-query.md](manual-query.md)
-- [scripts/http_integration_test.sh](../../../scripts/http_integration_test.sh)
+- [scripts/tests/http/integration-test.sh](../../../scripts/tests/http/integration-test.sh)
+- [docs/test/demo/http-protocol-edge-cases.md](http-protocol-edge-cases.md)
 - [server/server.c](../../../server/server.c)
 - [server/http.c](../../../server/http.c)
 - [server/api.c](../../../server/api.c)

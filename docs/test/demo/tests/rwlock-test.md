@@ -1,7 +1,7 @@
 # rwlock 수동 테스트 안내
 
 이 문서는 `pthread_rwlock_t` 전환 이후 무엇을 확인하는지,  
-그리고 `scripts/rwlock_stress_test.sh`가 실제로 어떤 상황을 검증하는지 자세히 설명한다.
+그리고 `scripts/tests/concurrency/rwlock-stress-test.sh`가 실제로 어떤 상황을 검증하는지 자세히 설명한다.
 
 ---
 
@@ -27,7 +27,7 @@
 - 쓰기 중에는 읽기도 막힌다
 - 읽기 중에는 쓰기도 기다린다
 
-그래서 `rwlock_stress_test`는 단순히 "응답이 온다"만 보는 게 아니라,  
+그래서 `rwlock-stress-test`는 단순히 "응답이 온다"만 보는 게 아니라,
 읽기와 쓰기가 섞인 상황에서도 데이터가 정상적으로 누적되는지를 본다.
 
 ---
@@ -41,7 +41,7 @@
 - **HTTP 클라이언트 기반 테스트**: `curl`로 서버에 HTTP 요청을 보내는 방식
 - **SQL REPL 기반 테스트**: `sql_processor/main`을 실행해서 SQL을 직접 입력하는 방식
 
-여기서 `rwlock_stress_test.sh`는 **HTTP 클라이언트 기반 테스트**다.  
+여기서 `rwlock-stress-test.sh`는 **HTTP 클라이언트 기반 테스트**다.
 즉, SQL을 쉘에 직접 치는 것이 아니라, `curl`이 SQL 문자열을 HTTP 요청 본문으로 서버에 보내는 구조다.
 
 ---
@@ -126,7 +126,7 @@ REPL 프로그램의 입력창에 SQL을 직접 넣는 방식이다.
 
 ---
 
-## 6. `rwlock_stress_test.sh`가 실제로 하는 일
+## 6. `rwlock-stress-test.sh`가 실제로 하는 일
 
 스크립트는 아래 순서로 움직인다.
 
@@ -266,7 +266,7 @@ rwlock stress test passed.
 
 다음 파일을 함께 보면 이해가 더 쉽다.
 
-- [`scripts/rwlock_stress_test.sh`](../../../scripts/rwlock_stress_test.sh)
+- [`scripts/tests/concurrency/rwlock-stress-test.sh`](../../../scripts/tests/concurrency/rwlock-stress-test.sh)
 - [`server/api.c`](../../../server/api.c)
 - [`server/server.c`](../../../server/server.c)
 - [`sql_processor/sql.c`](../../../sql_processor/sql.c)
@@ -281,5 +281,5 @@ rwlock stress test passed.
 
 ## 12. 한 줄 요약
 
-`rwlock_stress_test`는 `SELECT`와 `INSERT`를 동시에 많이 던져도,  
+`rwlock-stress-test`는 `SELECT`와 `INSERT`를 동시에 많이 던져도,
 읽기/쓰기 락이 올바르게 분리되어 동작하고 최종 데이터 개수가 정확히 맞는지 확인하는 테스트다.

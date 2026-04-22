@@ -32,6 +32,7 @@ test-unit:
 
 test-http:
 	sh scripts/http_integration_test.sh
+	sh scripts/http_protocol_edge_cases.sh
 
 test-rwlock:
 	sh scripts/rwlock_stress_test.sh
