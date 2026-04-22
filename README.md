@@ -695,7 +695,7 @@ flowchart TD
 
 이 처리가 필요한 이유는 서버가 처리할 수 없는 요청을 무한히 쌓아두면 메모리와 fd가 고갈되기 때문입니다.
 
-### 8-6. 동시성 설계의 한계
+### 9. 동시성 설계의 한계
 
 - HTTP body를 기다리는 worker는 그 시간 동안 묶입니다.
 - timeout은 있지만 event-driven 구조는 아닙니다.
@@ -704,70 +704,8 @@ flowchart TD
 
 ---
 
-## 9. 기존 SQL 엔진과 B+Tree 활용
 
-### 9-1. 기존 SQL Processor 재사용 방식
-
-API 서버는 SQL 문법을 새로 구현하지 않고 기존 `sql_processor`의 파서와 실행 함수를 재사용합니다.
-
-```text
-HTTP body
- -> api_handle_query()
- -> sql_parse()
- -> sql_execute_plan()
- -> table.c / bptree.c
-```
-
-이 방식을 선택한 이유는 기존 SQL 엔진의 단위 테스트를 그대로 활용하면서, 서버 계층은 HTTP와 JSON 변환에 집중할 수 있기 때문입니다.
-
-### 9-2. Table과 B+Tree의 역할
-
-```mermaid
-flowchart LR
-    A["Table"] --> B["Bucket"]
-    B --> C["rows array"]
-    B --> D["B+Tree pk_index"]
-    C --> E["Record"]
-    D --> E
-```
-
-- `Table`: 전체 `users` 테이블
-- `Bucket`: 테이블을 나눈 작은 저장 구역
-- `rows array`: 실제 `Record*` 저장
-- `B+Tree pk_index`: `id`로 `Record*`를 빠르게 찾는 인덱스
-
-### 9-3. WHERE id 조회와 인덱스 사용
-
-`WHERE id = ...` 조건은 B+Tree를 사용합니다.
-
-```text
-id 값
- -> bucket = id % 16
- -> bucket read lock
- -> bptree_search(id)
- -> Record* 반환
-```
-
-이 방식은 전체 record를 훑는 것보다 검색 범위가 작기 때문에 `id` 단건 조회에 적합합니다.
-
-### 9-4. name / age 조건 조회와 선형 탐색
-
-`name`과 `age`에는 별도 인덱스가 없기 때문에 bucket들을 순회하면서 조건을 비교합니다.
-
-```text
-SELECT * FROM users WHERE age > 20;
- -> 모든 bucket 순회
- -> Record의 age 비교
- -> 조건에 맞는 Record* 수집
-```
-
-발표 포인트:
-
-> 같은 SELECT라도 인덱스가 있는 컬럼과 없는 컬럼은 실행 방식이 다르다.
-
----
-
-## 10. 구현하면서 든 고민과 현재 답
+### 10. 구현하면서 든 고민과 현재 답
 
 ### 10-1. 워커 수를 왜 4로 정했는가
 
