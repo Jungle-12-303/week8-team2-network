@@ -1,0 +1,15 @@
+FROM debian:bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        git \
+        ca-certificates \
+        python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+
+CMD ["sh", "scripts/demo/demo_scenario_inner.sh"]

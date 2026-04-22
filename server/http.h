@@ -8,6 +8,7 @@
 #define HTTP_MAX_VERSION_SIZE 16
 #define HTTP_MAX_BODY_SIZE 4096
 #define HTTP_MAX_REQUEST_SIZE 8192
+#define HTTP_SOCKET_IO_TIMEOUT_SECONDS 5
 
 typedef struct HttpRequest {
     char method[HTTP_MAX_METHOD_SIZE];

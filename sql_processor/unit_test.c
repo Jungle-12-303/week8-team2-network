@@ -155,6 +155,33 @@ static void test_table_auto_increment(void) {
     table_destroy(table);
 }
 
+/* Verifies hash buckets still return ordered results across bucket boundaries. */
+static void test_table_hash_bucket_collection(void) {
+    Table *table = table_create();
+    Record **records = NULL;
+    size_t count = 0;
+    size_t index;
+
+    assert(table != NULL);
+
+    for (index = 0; index < TABLE_BUCKET_COUNT + 2; index++) {
+        char name[RECORD_NAME_SIZE];
+
+        snprintf(name, sizeof(name), "User%zu", index + 1);
+        assert(table_insert(table, name, 20 + (int)index) != NULL);
+    }
+
+    assert(table_find_by_id(table, 1) != NULL);
+    assert(table_find_by_id(table, TABLE_BUCKET_COUNT + 1) != NULL);
+    assert(table_collect_all(table, &records, &count) == 1);
+    assert(count == TABLE_BUCKET_COUNT + 2);
+    assert(records[0]->id == 1);
+    assert(records[count - 1]->id == TABLE_BUCKET_COUNT + 2);
+
+    free(records);
+    table_destroy(table);
+}
+
 /* Verifies ID search uses the inserted indexed records. */
 static void test_table_find_by_id(void) {
     Table *table = table_create();
@@ -406,6 +433,7 @@ int main(void) {
     test_internal_split_new_root();
     test_leaf_next_link();
     test_table_auto_increment();
+    test_table_hash_bucket_collection();
     test_table_find_by_id();
     test_table_linear_search_fields();
     test_table_condition_search();

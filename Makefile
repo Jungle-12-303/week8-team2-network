@@ -33,10 +33,16 @@ test-unit:
 test-http:
 	sh scripts/http_integration_test.sh
 	sh scripts/http_protocol_edge_cases.sh
+	sh scripts/http_timeout_test.sh
 
-test-rwlock:
-	sh scripts/rwlock_stress_test.sh
+test-concurrency:
+	sh scripts/bucket_lock_stress_test.sh
 
-test: test-unit test-http test-rwlock
+test-rwlock: test-concurrency
 
-.PHONY: all clean test-unit test-http test-rwlock test
+demo:
+	sh scripts/demo/demo_scenario.sh
+
+test: test-unit test-http test-concurrency
+
+.PHONY: all clean test-unit test-http test-concurrency test-rwlock demo test

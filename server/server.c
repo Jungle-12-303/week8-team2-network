@@ -14,12 +14,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 struct Server {
     int listen_fd;
     Table *table;
-    pthread_rwlock_t db_lock;
     ThreadPool pool;
     ServerConfig config;
     int initialized;
@@ -65,6 +65,23 @@ static int server_make_listen_socket(unsigned short port, int backlog) {
     return listen_fd;
 }
 
+static int server_set_client_socket_timeouts(int client_fd) {
+    struct timeval timeout;
+
+    timeout.tv_sec = HTTP_SOCKET_IO_TIMEOUT_SECONDS;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0) {
+        return 0;
+    }
+
+    if (setsockopt(client_fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) != 0) {
+        return 0;
+    }
+
+    return 1;
+}
+
 static char *server_build_error_body(const char *status, const char *message) {
     JsonBuffer buffer;
 
@@ -102,6 +119,8 @@ static const char *server_http_error_status_name(int status_code) {
             return "not_found";
         case 405:
             return "method_not_allowed";
+        case 408:
+            return "request_timeout";
         case 413:
             return "payload_too_large";
         case 500:
@@ -135,7 +154,7 @@ static void server_handle_client(void *context, int client_fd) {
         return;
     }
 
-    if (!api_handle_query(server->table, &server->db_lock, request.body, &api_result)) {
+    if (!api_handle_query(server->table, request.body, &api_result)) {
         char *body = server_build_error_body("internal_error", "Failed to execute SQL");
         if (body != NULL) {
             http_send_response(client_fd, 500, "application/json; charset=utf-8", body);
@@ -170,15 +189,7 @@ Server *server_create(const ServerConfig *config) {
         return NULL;
     }
 
-    if (pthread_rwlock_init(&server->db_lock, NULL) != 0) {
-        table_destroy(server->table);
-        server->table = NULL;
-        free(server);
-        return NULL;
-    }
-
     if (!thread_pool_init(&server->pool, config->worker_count, config->queue_capacity, server_handle_client, server)) {
-        pthread_rwlock_destroy(&server->db_lock);
         table_destroy(server->table);
         server->table = NULL;
         free(server);
@@ -188,7 +199,6 @@ Server *server_create(const ServerConfig *config) {
     server->listen_fd = server_make_listen_socket(config->port, config->backlog);
     if (server->listen_fd < 0) {
         thread_pool_destroy(&server->pool);
-        pthread_rwlock_destroy(&server->db_lock);
         table_destroy(server->table);
         server->table = NULL;
         free(server);
@@ -220,6 +230,11 @@ int server_run(Server *server) {
                 break;
             }
             break;
+        }
+
+        if (!server_set_client_socket_timeouts(client_fd)) {
+            close(client_fd);
+            continue;
         }
 
         if (!thread_pool_submit(&server->pool, client_fd)) {
@@ -257,8 +272,6 @@ void server_destroy(Server *server) {
         close(server->listen_fd);
         server->listen_fd = -1;
     }
-
-    pthread_rwlock_destroy(&server->db_lock);
 
     if (server->table != NULL) {
         table_destroy(server->table);
