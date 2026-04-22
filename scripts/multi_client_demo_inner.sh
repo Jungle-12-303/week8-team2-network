@@ -7,7 +7,7 @@ WORKERS=4
 QUEUE=16
 TOTAL_CAPACITY=$((WORKERS + QUEUE))
 N_CLIENTS=25
-HOLD_SECONDS=5
+HOLD_SECONDS=4
 SERVER_LOG="${TMPDIR:-/tmp}/demo_server_$$.log"
 SERVER_PID=""
 TMP_DIR="${TMPDIR:-/tmp}/multi_client_demo.$$"
@@ -57,7 +57,7 @@ client_request() {
     local status="0"
 
     exec {fd}<>"/dev/tcp/127.0.0.1/$PORT"
-    if ! printf 'POST /query HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n' "${#sql}" >&"${fd}"; then
+    if ! printf 'POST /query HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n' "${#sql}" >&"${fd}" 2>/dev/null; then
         printf '503 큐 포화\n' >"$output_file"
         exec {fd}>&-
         return 0
@@ -72,7 +72,7 @@ client_request() {
     fi
 
     sleep "$HOLD_SECONDS"
-    if ! printf '%s' "$sql" >&"${fd}"; then
+    if ! printf '%s' "$sql" >&"${fd}" 2>/dev/null; then
         printf '503 큐 포화\n' >"$output_file"
         exec {fd}>&-
         return 0
@@ -118,7 +118,7 @@ for i in $(seq 1 "$N_CLIENTS"); do
 done
 
 for pid in "${pids[@]}"; do
-    wait "$pid"
+    wait "$pid" || true
 done
 
 ok_count=0
