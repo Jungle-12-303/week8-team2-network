@@ -5,6 +5,7 @@
 ## 문서 구조
 
 - [브랜치 비교 리포트](혜연vsexp1.md)
+- [과제 기준 평가 리포트](week8-team2-network-evaluation.md)
 - [초기 리뷰 반영 기록](초기리뷰/README.md)
 - [해결기록 사용 가이드](해결기록/README.md)
 
