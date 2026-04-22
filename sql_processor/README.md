@@ -28,7 +28,9 @@
 - `SELECT * FROM users WHERE id = 1;`
 - `SELECT * FROM users WHERE id >= 10;`
 - `SELECT * FROM users WHERE name = 'Alice';`
+- `SELECT * FROM users WHERE age = 20;`
 - `SELECT * FROM users WHERE age > 20;`
+- `SELECT * FROM users WHERE age <= 20;`
 - `id` 자동 증가
 - `id` 기준 B+Tree 인덱스 검색
 - `name`, `age` 기준 선형 탐색
@@ -176,7 +178,8 @@ SELECT * FROM users;
 SELECT * FROM users WHERE id = 1;
 SELECT * FROM users WHERE id >= 2;
 SELECT * FROM users WHERE name = 'Bob';
+SELECT * FROM users WHERE age = 20;
 SELECT * FROM users WHERE age > 20;
+SELECT * FROM users WHERE age <= 20;
 QUIT
 ```
-

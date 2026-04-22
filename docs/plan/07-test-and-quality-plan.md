@@ -23,6 +23,7 @@ make
 - leaf split과 internal split 이후 검색 유지.
 - leaf link 기반 range query.
 - `INSERT`, `SELECT`, `WHERE id/name/age` 처리.
+- `WHERE age =`, `WHERE age >`, `WHERE age <=` 처리.
 - SQL 오류 메시지.
 
 ## API 기능 테스트
@@ -47,11 +48,18 @@ curl -X POST http://localhost:8080/query \
   --data "SELECT * FROM users WHERE id >= 1;"
 ```
 
+```bash
+curl -X POST http://localhost:8080/query \
+  -H "Content-Type: text/plain" \
+  --data "SELECT * FROM users WHERE age <= 20;"
+```
+
 검증 기준:
 
 - HTTP status가 기대와 일치합니다.
 - JSON body가 깨지지 않습니다.
 - INSERT 후 SELECT에서 row가 조회됩니다.
+- `WHERE age <= 20` 같은 조건 조회도 정상 응답합니다.
 - SQL 문법 오류가 서버 crash 없이 응답으로 반환됩니다.
 
 ## HTTP 엣지 케이스

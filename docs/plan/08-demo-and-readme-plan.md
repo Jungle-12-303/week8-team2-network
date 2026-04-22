@@ -78,6 +78,17 @@ curl -X POST http://localhost:8080/query \
 
 - `id` 조건은 B+Tree 인덱스 경로를 활용합니다.
 
+```bash
+curl -X POST http://localhost:8080/query \
+  -H "Content-Type: text/plain" \
+  --data "SELECT * FROM users WHERE age <= 20;"
+```
+
+보여줄 점:
+
+- `age` 조건은 선형 탐색 경로를 활용합니다.
+- `=`, `>`, `<=` 같은 비교 연산이 실제로 동작합니다.
+
 ### 5. 동시 요청
 
 ```bash

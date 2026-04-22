@@ -24,6 +24,7 @@ int main(void) {
     printf("  SELECT * FROM users WHERE name = 'Alice';\n");
     printf("  SELECT * FROM users WHERE age = 20;\n");
     printf("  SELECT * FROM users WHERE age > 20;\n");
+    printf("  SELECT * FROM users WHERE age <= 20;\n");
     printf("Type EXIT or QUIT to leave.\n");
 
     while (1) {

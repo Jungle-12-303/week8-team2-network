@@ -122,6 +122,8 @@ curl -v -X POST http://localhost:8080/unknown \
 ## 같이 보면 좋은 파일
 
 - [scripts/smoke_test.sh](../../../scripts/smoke_test.sh)
+- [scripts/manual_query.sh](../../../scripts/manual_query.sh)
+- [docs/test/demo/manual-query.md](manual-query.md)
 - [scripts/http_integration_test.sh](../../../scripts/http_integration_test.sh)
 - [server/server.c](../../../server/server.c)
 - [server/http.c](../../../server/http.c)

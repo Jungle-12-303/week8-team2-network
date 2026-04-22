@@ -74,7 +74,9 @@ curl -v -X POST http://localhost:8080/query \
 - `SELECT * FROM users WHERE id = 1;`
 - `SELECT * FROM users WHERE id >= 10;`
 - `SELECT * FROM users WHERE name = 'Alice';`
+- `SELECT * FROM users WHERE age = 20;`
 - `SELECT * FROM users WHERE age > 20;`
+- `SELECT * FROM users WHERE age <= 20;`
 
 ## 테스트
 
@@ -84,6 +86,14 @@ curl -v -X POST http://localhost:8080/query \
 
 ```bash
 sh scripts/smoke_test.sh
+```
+
+### 수동 쿼리 확인
+
+서버를 띄운 뒤 직접 `INSERT`, `SELECT`를 입력하면서 응답을 보고 싶으면 아래를 실행한다.
+
+```bash
+sh scripts/manual_query.sh 8080
 ```
 
 ### 전체 자동화 테스트

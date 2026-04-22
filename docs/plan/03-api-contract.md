@@ -95,7 +95,9 @@ SELECT * FROM users;
 SELECT * FROM users WHERE id = 1;
 SELECT * FROM users WHERE id >= 10;
 SELECT * FROM users WHERE name = 'Alice';
+SELECT * FROM users WHERE age = 20;
 SELECT * FROM users WHERE age > 20;
+SELECT * FROM users WHERE age <= 20;
 ```
 
 ## HTTP 제약

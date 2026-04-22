@@ -34,10 +34,12 @@
 - 지원 SQL은 기존 엔진이 지원하는 범위로 제한합니다.
   - `INSERT INTO users VALUES ('Alice', 20);`
   - `SELECT * FROM users;`
-  - `SELECT * FROM users WHERE id = 1;`
-  - `SELECT * FROM users WHERE id >= 10;`
-  - `SELECT * FROM users WHERE name = 'Alice';`
-  - `SELECT * FROM users WHERE age > 20;`
+- `SELECT * FROM users WHERE id = 1;`
+- `SELECT * FROM users WHERE id >= 10;`
+- `SELECT * FROM users WHERE name = 'Alice';`
+- `SELECT * FROM users WHERE age = 20;`
+- `SELECT * FROM users WHERE age > 20;`
+- `SELECT * FROM users WHERE age <= 20;`
 - API는 `POST /query` 하나로 시작합니다.
 - 저장소는 메모리 기반으로 유지합니다.
 - 서버 실행 중 하나의 `users` 테이블을 공유합니다.

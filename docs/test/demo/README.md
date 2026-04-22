@@ -7,6 +7,7 @@
 - [단위 테스트](unit-tests.md)
 - [HTTP 스모크 테스트와 수동 확인](http-smoke-test.md)
 - [HTTP 통합 테스트](http-integration-test.md)
+- [수동 쿼리 확인](manual-query.md)
 
 ## 원칙
 
@@ -19,3 +20,4 @@
 - `sql_processor/unit_test.c`는 이미 구현되어 있다
 - `scripts/smoke_test.sh`는 이미 구현되어 있다
 - `scripts/http_integration_test.sh`는 이미 구현되어 있다
+- `scripts/manual_query.sh`는 이미 구현되어 있다
