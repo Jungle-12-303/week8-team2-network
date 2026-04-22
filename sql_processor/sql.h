@@ -22,6 +22,12 @@ typedef enum SQLAction {
     SQL_ACTION_SELECT_ROWS
 } SQLAction;
 
+typedef enum SQLLockMode {
+    SQL_LOCK_NONE,
+    SQL_LOCK_READ,
+    SQL_LOCK_WRITE
+} SQLLockMode;
+
 typedef struct SQLResult {
     SQLStatus status;
     SQLAction action;
@@ -36,6 +42,9 @@ typedef struct SQLResult {
 
 /* Parses one SQL statement and executes it against the table. */
 SQLResult sql_execute(Table *table, const char *input);
+
+/* Returns the lock mode required for the given SQL statement. */
+SQLLockMode sql_determine_lock_mode(const char *input);
 
 /* Releases any heap memory owned by a SQL result. */
 void sql_result_destroy(SQLResult *result);

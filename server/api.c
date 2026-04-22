@@ -105,10 +105,12 @@ static int api_build_error_response(const SQLResult *sql_result, JsonBuffer *buf
     return json_buffer_append(buffer, "}");
 }
 
-int api_handle_query(Table *table, pthread_mutex_t *db_mutex, const char *sql, ApiResult *result) {
+int api_handle_query(Table *table, pthread_rwlock_t *db_lock, const char *sql, ApiResult *result) {
     SQLResult sql_result;
     JsonBuffer buffer;
+    SQLLockMode lock_mode;
     int ok;
+    int locked = 0;
 
     if (result == NULL) {
         return 0;
@@ -117,19 +119,32 @@ int api_handle_query(Table *table, pthread_mutex_t *db_mutex, const char *sql, A
     result->http_status = 500;
     result->body = NULL;
 
-    if (table == NULL || db_mutex == NULL || sql == NULL) {
+    if (table == NULL || db_lock == NULL || sql == NULL) {
         return 0;
     }
 
-    if (pthread_mutex_lock(db_mutex) != 0) {
-        return 0;
+    lock_mode = sql_determine_lock_mode(sql);
+    if (lock_mode == SQL_LOCK_READ) {
+        if (pthread_rwlock_rdlock(db_lock) != 0) {
+            return 0;
+        }
+        locked = 1;
+    } else if (lock_mode == SQL_LOCK_WRITE) {
+        if (pthread_rwlock_wrlock(db_lock) != 0) {
+            return 0;
+        }
+        locked = 1;
     }
 
     sql_result = sql_execute(table, sql);
 
+    if (locked) {
+        pthread_rwlock_unlock(db_lock);
+        locked = 0;
+    }
+
     if (!json_buffer_init(&buffer, 256)) {
         sql_result_destroy(&sql_result);
-        pthread_mutex_unlock(db_mutex);
         return 0;
     }
 
@@ -154,7 +169,6 @@ int api_handle_query(Table *table, pthread_mutex_t *db_mutex, const char *sql, A
     }
 
     sql_result_destroy(&sql_result);
-    pthread_mutex_unlock(db_mutex);
 
     if (!ok) {
         json_buffer_destroy(&buffer);

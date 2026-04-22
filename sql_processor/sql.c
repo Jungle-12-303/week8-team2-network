@@ -117,6 +117,28 @@ static int sql_match_keyword(const char **cursor, const char *keyword) {
     return 1;
 }
 
+/* Returns the lock mode implied by the first SQL keyword. */
+SQLLockMode sql_determine_lock_mode(const char *input) {
+    const char *cursor;
+
+    if (input == NULL) {
+        return SQL_LOCK_NONE;
+    }
+
+    cursor = input;
+    sql_skip_spaces(&cursor);
+
+    if (sql_match_keyword(&cursor, "SELECT")) {
+        return SQL_LOCK_READ;
+    }
+
+    if (sql_match_keyword(&cursor, "INSERT")) {
+        return SQL_LOCK_WRITE;
+    }
+
+    return SQL_LOCK_NONE;
+}
+
 /* Matches a single expected punctuation character. */
 static int sql_match_char(const char **cursor, char expected) {
     sql_skip_spaces(cursor);

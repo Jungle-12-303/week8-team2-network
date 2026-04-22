@@ -19,7 +19,7 @@
 struct Server {
     int listen_fd;
     Table *table;
-    pthread_mutex_t db_mutex;
+    pthread_rwlock_t db_lock;
     ThreadPool pool;
     ServerConfig config;
     int initialized;
@@ -135,7 +135,7 @@ static void server_handle_client(void *context, int client_fd) {
         return;
     }
 
-    if (!api_handle_query(server->table, &server->db_mutex, request.body, &api_result)) {
+    if (!api_handle_query(server->table, &server->db_lock, request.body, &api_result)) {
         char *body = server_build_error_body("internal_error", "Failed to execute SQL");
         if (body != NULL) {
             http_send_response(client_fd, 500, "application/json; charset=utf-8", body);
@@ -170,7 +170,7 @@ Server *server_create(const ServerConfig *config) {
         return NULL;
     }
 
-    if (pthread_mutex_init(&server->db_mutex, NULL) != 0) {
+    if (pthread_rwlock_init(&server->db_lock, NULL) != 0) {
         table_destroy(server->table);
         server->table = NULL;
         free(server);
@@ -178,7 +178,7 @@ Server *server_create(const ServerConfig *config) {
     }
 
     if (!thread_pool_init(&server->pool, config->worker_count, config->queue_capacity, server_handle_client, server)) {
-        pthread_mutex_destroy(&server->db_mutex);
+        pthread_rwlock_destroy(&server->db_lock);
         table_destroy(server->table);
         server->table = NULL;
         free(server);
@@ -188,7 +188,7 @@ Server *server_create(const ServerConfig *config) {
     server->listen_fd = server_make_listen_socket(config->port, config->backlog);
     if (server->listen_fd < 0) {
         thread_pool_destroy(&server->pool);
-        pthread_mutex_destroy(&server->db_mutex);
+        pthread_rwlock_destroy(&server->db_lock);
         table_destroy(server->table);
         server->table = NULL;
         free(server);
@@ -248,7 +248,7 @@ void server_destroy(Server *server) {
         server->listen_fd = -1;
     }
 
-    pthread_mutex_destroy(&server->db_mutex);
+    pthread_rwlock_destroy(&server->db_lock);
 
     if (server->table != NULL) {
         table_destroy(server->table);
