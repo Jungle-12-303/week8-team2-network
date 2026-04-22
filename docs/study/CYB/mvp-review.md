@@ -22,34 +22,29 @@
 
 ## 2. 발견된 문제점 및 개선 제안
 
-### [이슈 1] 뮤텍스 범위가 너무 넓다 — `api.c:124~163`
+### [이슈 1] ~~뮤텍스 범위가 너무 넓다~~ → **해결됨**
 
-**현재 코드 흐름:**
+> `pthread_mutex_t` → `pthread_rwlock_t` 전환 및 lock 범위 축소가 완료되었다.
+
+**현재 코드 흐름 (`api.c:108~179`):**
 ```c
-pthread_mutex_lock(db_mutex);
-sql_result = sql_execute(table, sql);     // DB 접근 (락 필요)
-json_buffer_init(&buffer, 256);          // 메모리 할당 (락 불필요)
-api_build_success_response(...);         // JSON 직렬화 (락 불필요)
-pthread_mutex_unlock(db_mutex);
-```
+lock_mode = sql_determine_lock_mode(sql);
+// SELECT → pthread_rwlock_rdlock(db_lock)
+// INSERT → pthread_rwlock_wrlock(db_lock)
 
-**문제**: JSON 직렬화는 `table`에 접근하지 않는다. 뮤텍스를 잡은 채로 수행할 필요가 없다.  
-워커 4개가 동시에 요청을 받아도 실질적으로 직렬화되어 처리된다.
+sql_result = sql_execute(table, sql);   // DB 접근 (잠금 안)
 
-**제안 수정:**
-```c
-pthread_mutex_lock(db_mutex);
-sql_result = sql_execute(table, sql);
-pthread_mutex_unlock(db_mutex);           // 여기서 즉시 해제
+pthread_rwlock_unlock(db_lock);         // SQL 실행 직후 즉시 해제
 
-// 락 없이 JSON 직렬화
+// 잠금 밖에서 JSON 직렬화
 json_buffer_init(&buffer, 256);
 api_build_success_response(&sql_result, &buffer);
-sql_result_destroy(&sql_result);          // records[]도 여기서 해제
 ```
 
-> 단, `sql_result.records`가 table 내부 포인터를 참조하는지 복사본인지 확인 필요.  
-> `table.c`의 `table_copy_records()`를 보면 별도 malloc으로 복사하므로 안전하게 분리 가능.
+**개선 내용**:
+- `pthread_mutex_t`(전체 직렬화) → `pthread_rwlock_t`(SELECT 병렬 허용)로 격상
+- JSON 직렬화를 lock 밖으로 분리해 임계 구역 최소화
+- SELECT 여러 개가 동시에 `rdlock`을 잡아 읽기 병렬성 확보
 
 ---
 
@@ -166,6 +161,8 @@ static void server_handle_client(void *context, int client_fd) {
 | API 에러 구조 분리 | `server.c` vs `api.c` | HTTP 레벨 에러와 SQL 레벨 에러를 다른 경로로 처리 |
 | 워커 종료 조건 | `thread_pool.c:18` | `stop_requested && size==0` 조건으로 진행 중인 작업 완료 후 종료 |
 | `strtoul` 포트 검증 | `server_main.c:40~44` | end_ptr 검사로 "abc" 같은 잘못된 포트 차단 |
+| rwlock 도입 | `server.c:22`, `api.c:108` | SELECT 병렬 처리 허용, INSERT만 독점 잠금 |
+| lock 범위 최소화 | `api.c:141~143` | `sql_execute` 직후 unlock, JSON 직렬화는 잠금 밖 |
 
 ---
 

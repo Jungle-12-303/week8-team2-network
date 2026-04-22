@@ -59,10 +59,12 @@ HTTP POST /query  →  SQL 파서  →  인메모리 테이블  →  JSON 응답
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    server/api.c                              │
-│   pthread_mutex_lock(db_mutex)                               │
+│   sql_determine_lock_mode(sql)                               │
+│     SELECT → pthread_rwlock_rdlock(db_lock)                  │
+│     INSERT → pthread_rwlock_wrlock(db_lock)                  │
 │   → sql_execute(table, sql)                                  │
-│   → JSON 직렬화 (json_util.c 활용)                            │
-│   → pthread_mutex_unlock(db_mutex)                           │
+│   → pthread_rwlock_unlock(db_lock)   ← SQL 실행 직후 해제    │
+│   → JSON 직렬화 (json_util.c 활용)   ← 잠금 밖에서 수행      │
 └─────────────────────────┬───────────────────────────────────┘
                           │
               ┌───────────┴───────────┐
@@ -138,14 +140,14 @@ flowchart TD
         F20["thread_pool_shutdown()"]
         F21["server_destroy()"]
         F22["listen_fd close"]
-        F23["table/mutex 메모리 해제"]
+        F23["table/rwlock 메모리 해제"]
         F24["프로세스 종료"]
     end
 
     subgraph S4["핵심 변수 / 리소스 (Variable Layer)"]
         V0["listen_fd"]
         V1["client_fd"]
-        V2["db_mutex"]
+        V2["db_lock"]
         V3["job queue"]
         V4["table"]
         V5["worker threads[N]"]
@@ -228,7 +230,7 @@ flowchart TD
 핵심 수정 포인트는 다음 세 가지다.
 
 - `http_read_request()`와 `api_handle_query()`는 워커가 실행하는 `server_handle_client()` 내부에서 호출된다.
-- `db_mutex`는 `api.c`에서 잠그고, `sql_execute()` 및 JSON 직렬화가 끝난 뒤 해제된다.
+- `db_lock`은 `api.c`에서 잠그고, `sql_execute()` 직후 해제된다. JSON 직렬화는 잠금 밖에서 수행된다. SELECT는 `rdlock`(읽기 공유), INSERT는 `wrlock`(쓰기 독점)을 사용한다.
 - `close(client_fd)`는 정상/오류 응답 이후 `thread_pool.c`의 워커 루프에서 수행된다. 단, 큐가 가득 찼을 때만 `server.c`가 즉시 `503`을 보내고 직접 닫는다.
 
 ```mermaid
@@ -258,13 +260,14 @@ sequenceDiagram
             H->>HTTP: http_send_response(4xx/5xx, error JSON)
         else valid POST /query
             HTTP-->>H: HttpRequest{body=SQL}
-            H->>API: api_handle_query(table, db_mutex, sql, ...)
-            API->>API: pthread_mutex_lock(db_mutex)
+            H->>API: api_handle_query(table, db_lock, sql, ...)
+            API->>API: sql_determine_lock_mode(sql)<br/>SELECT→rdlock / INSERT→wrlock
+            API->>API: pthread_rwlock_rdlock/wrlock(db_lock)
             API->>SQL: sql_execute(table, sql)
             SQL->>SQL: parse INSERT/SELECT\nrun table lookup or insert
             SQL-->>API: SQLResult
-            API->>API: build JSON response
-            API->>API: pthread_mutex_unlock(db_mutex)
+            API->>API: pthread_rwlock_unlock(db_lock)
+            API->>API: build JSON response (잠금 밖)
             API-->>H: ApiResult{http_status, body}
             H->>HTTP: http_send_response(status, application/json, body)
         end
@@ -289,7 +292,7 @@ sequenceDiagram
 | `server/server.c` | TCP 서버 루프, 리소스 생명주기 관리 | `socket`, `bind`, `listen`, `accept` |
 | `server/thread_pool.c` | 고정 워커 풀 + 원형 큐 | `pthread_mutex`, `pthread_cond`, circular buffer |
 | `server/http.c` | HTTP 요청 파싱, 응답 직렬화 | `recv`, `send`, Content-Length |
-| `server/api.c` | SQL 실행과 HTTP 계층 연결 | 뮤텍스 보호, JSON 직렬화 |
+| `server/api.c` | SQL 실행과 HTTP 계층 연결 | `pthread_rwlock` 보호 (SELECT: rdlock, INSERT: wrlock), JSON 직렬화 |
 | `server/json_util.c` | 동적 JSON 문자열 빌더 | `realloc`, JSON escape |
 | `sql_processor/sql.c` | SQL 파서 + 실행기 | 재귀 하강 파서 |
 | `sql_processor/table.c` | 인메모리 테이블 | 동적 배열, 선형 스캔 |
@@ -402,9 +405,12 @@ sql_execute("SELECT * FROM users WHERE id >= 2;")
 목표: mutex/cond_wait 패턴으로 producer-consumer를 구현하는 방법을 이해한다.
 읽을 것: server/thread_pool.h → server/thread_pool.c
 집중 포인트:
-  • thread_pool_worker_main() 의 while 루프 (line 10~35)
-  • submit()에서 cond_signal, worker에서 cond_wait (line 93~122)
-  • stop_requested 플래그와 graceful shutdown
+  • thread_pool_worker_main()의 while 루프 (line 7~35)
+  • worker는 큐가 비면 cond_wait로 잠들고, submit()은 cond_signal로 worker를 깨운다
+    - cond_wait: line 13~16
+    - cond_signal: line 100~107
+  • stop_requested 플래그와 shutdown 시 cond_broadcast 흐름
+    - shutdown: line 113~122
 핵심 질문: mutex 없이 size/head/tail을 수정하면 무슨 일이 생기는가?
 ```
 
@@ -451,11 +457,11 @@ sql_execute("SELECT * FROM users WHERE id >= 2;")
 
 ### STEP 8 - API 레이어와 전체 연결 (api.c)
 ```
-목표: HTTP 계층과 DB 계층을 연결하는 뮤텍스 보호 패턴을 이해한다.
+목표: HTTP 계층과 DB 계층을 연결하는 rwlock 보호 패턴을 이해한다.
 읽을 것: server/api.c, server/json_util.c
 집중 포인트:
-  • api_handle_query()의 mutex_lock → sql_execute → mutex_unlock 범위
-  • api_build_success_response()의 JSON 빌딩 패턴
+  • sql_determine_lock_mode() → rdlock/wrlock 선택 → sql_execute → unlock 범위
+  • JSON 직렬화가 unlock 이후에 수행되는 이유
   • SQLStatus → HTTP status code 매핑 로직
 ```
 
@@ -486,7 +492,7 @@ sql_execute("SELECT * FROM users WHERE id >= 2;")
 |------|----------------------|
 | `client_fd` | accept()로 얻은 소켓 파일 디스크립터 (클라이언트 연결 하나) |
 | `listen_fd` | 서버가 바인딩한 소켓 (새 연결 대기용) |
-| `db_mutex` | Table에 대한 읽기/쓰기를 직렬화하는 뮤텍스 |
+| `db_lock` | Table을 보호하는 rwlock (SELECT: rdlock 공유, INSERT: wrlock 독점) |
 | `HttpRequest` | 파싱된 HTTP 요청 구조체 (method, path, body) |
 | `SQLResult` | sql_execute()의 반환값 (rows[], status, error 정보) |
 | `ApiResult` | JSON 직렬화된 응답 문자열 + HTTP 상태코드 |
