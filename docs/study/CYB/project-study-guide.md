@@ -59,10 +59,12 @@ HTTP POST /query  →  SQL 파서  →  인메모리 테이블  →  JSON 응답
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    server/api.c                              │
-│   pthread_mutex_lock(db_mutex)                               │
+│   sql_determine_lock_mode(sql)                               │
+│     SELECT → pthread_rwlock_rdlock(db_lock)                  │
+│     INSERT → pthread_rwlock_wrlock(db_lock)                  │
 │   → sql_execute(table, sql)                                  │
-│   → JSON 직렬화 (json_util.c 활용)                            │
-│   → pthread_mutex_unlock(db_mutex)                           │
+│   → pthread_rwlock_unlock(db_lock)   ← SQL 실행 직후 해제    │
+│   → JSON 직렬화 (json_util.c 활용)   ← 잠금 밖에서 수행      │
 └─────────────────────────┬───────────────────────────────────┘
                           │
               ┌───────────┴───────────┐
@@ -89,13 +91,146 @@ HTTP POST /query  →  SQL 파서  →  인메모리 테이블  →  JSON 응답
 
 ---
 
-## 3. 요청 한 건의 전체 여정 (시퀀스 다이어그램)
+## 3. 서버의 실제 동작 흐름
+
+아래 그림은 **서버 프로세스 입장**에서 본 전체 생명주기다.  
+이번 그림은 계층을 구분해서 읽을 수 있게 만들었다.
+
+- 보라색: **실행 명령**
+- 파란색: **실행 주체**
+- 초록색: **함수 / 실행 단계**
+- 주황색: **핵심 변수 / 리소스**
+- 회색: **개념 / 상태 / 실행 환경**
+
+```mermaid
+flowchart TD
+    CMD["실행 명령<br/>./db_server 8080"]
+
+    subgraph S0["주체 (Actor Layer)"]
+        A0["main thread"]
+        A1["worker thread #0..N-1"]
+    end
+
+    subgraph S1["서버 시작 함수 흐름 (Function Layer)"]
+        F1["server_main()<br/>포트 파싱"]
+        F2["시그널 핸들러 설치"]
+        F3["server_create()"]
+        F4["table/mutex/pool 초기화"]
+        F5["server_make_listen_socket()"]
+        F6["socket() -> bind() -> listen()"]
+        F7["server_run()"]
+        F8["accept() 루프"]
+    end
+
+    subgraph S2["요청 처리 함수 흐름 (Function Layer)"]
+        F9["accept(listen_fd)"]
+        F10{"submit 성공?"}
+        F11["queue에 client_fd 적재"]
+        F12["worker dequeue"]
+        F13["server_handle_client()"]
+        F14["http_read_request()"]
+        F15["api_handle_query()"]
+        F16["http_send_response()"]
+        F17["close(client_fd)"]
+        F18["503 응답 후 close"]
+    end
+
+    subgraph S3["종료 함수 흐름 (Function Layer)"]
+        F19{"shutdown 요청인가?"}
+        F20["thread_pool_shutdown()"]
+        F21["server_destroy()"]
+        F22["listen_fd close"]
+        F23["table/rwlock 메모리 해제"]
+        F24["프로세스 종료"]
+    end
+
+    subgraph S4["핵심 변수 / 리소스 (Variable Layer)"]
+        V0["listen_fd"]
+        V1["client_fd"]
+        V2["db_lock"]
+        V3["job queue"]
+        V4["table"]
+        V5["worker threads[N]"]
+    end
+
+    subgraph S5["개념 / 상태 / 실행 환경 (Concept Layer)"]
+        C0["LISTEN 상태"]
+        C1["새 TCP 연결 대기"]
+        C2["요청 1건당 연결 1개"]
+        C3["queue full이면 즉시 503"]
+        C4["main thread는 accept 담당"]
+        C5["worker thread는 요청 처리 담당"]
+        C6["kernel<br/>소켓 상태와 TCP 연결을 관리"]
+        C7["고정 크기 thread pool"]
+        C8["producer-consumer 구조"]
+    end
+
+    CMD --> A0
+    A0 --> F1 --> F2 --> F3 --> F4 --> F5 --> F6 --> F7 --> F8
+    F8 --> F19
+    F19 -- "아니오" --> F9 --> F10
+    F10 -- "예" --> F11 --> F12
+    F12 --> A1
+    A1 --> F13 --> F14 --> F15 --> F16 --> F17 --> F8
+    F10 -- "아니오" --> F18 --> F8
+    F19 -- "예" --> F20 --> F21 --> F22 --> F23 --> F24
+
+    F6 -.생성.-> V0
+    F9 -.반환.-> V1
+    F4 -.초기화.-> V2
+    F4 -.생성.-> V3
+    F4 -.생성.-> V4
+    F4 -.생성.-> V5
+
+    V0 -.상태.-> C0
+    C0 -.의미.-> C1
+    V1 -.의미.-> C2
+    V3 -.가득 차면.-> C3
+    A0 -.역할.-> C4
+    A1 -.역할.-> C5
+    C6 -.connect/accept 지원.-> F9
+    V5 -.개념.-> C7
+    V3 -.개념.-> C8
+    A0 -.producer.-> V3
+    V3 -.consumer.-> A1
+
+    classDef cmd fill:#f3e8ff,stroke:#a855f7,color:#6b21a8,stroke-width:1.5px;
+    classDef actor fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a,stroke-width:1.5px;
+    classDef func fill:#dcfce7,stroke:#22c55e,color:#14532d,stroke-width:1.5px;
+    classDef var fill:#ffedd5,stroke:#f97316,color:#9a3412,stroke-width:1.5px;
+    classDef concept fill:#f1f5f9,stroke:#64748b,color:#334155,stroke-width:1.5px;
+
+    class CMD cmd;
+    class A0,A1 actor;
+    class F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,F13,F14,F15,F16,F17,F18,F19,F20,F21,F22,F23,F24 func;
+    class V0,V1,V2,V3,V4,V5 var;
+    class C0,C1,C2,C3,C4,C5,C6,C7,C8 concept;
+```
+
+### 정적 SVG 버전
+
+![서버 실제 동작 흐름 SVG](./assets/server-lifecycle-overview.svg)
+
+### 이 흐름에서 중요한 포인트
+
+- `main thread`와 `worker thread`를 분리해서 봐야 전체 구조가 이해된다.
+- `listen_fd`는 "새 연결을 받는 소켓"이고, `client_fd`는 "연결 1건을 처리하는 소켓"이다.
+- `./db_server 8080`은 실행 명령이고, `server_create()`나 `accept()`는 그 뒤에 호출되는 함수다.
+- `listen()`은 함수 호출이고, `LISTEN 상태`는 그 호출 결과로 커널에 생기는 상태다.
+- `kernel`은 서버 코드의 직접 실행 주체가 아니라, 소켓과 TCP 연결을 관리하는 실행 환경으로 보는 편이 정확하다.
+- `accept()`는 메인 스레드가 수행하지만, 실제 HTTP/SQL 처리는 워커 스레드가 맡는다.
+- `thread pool`은 "worker thread 여러 개 + shared job queue"의 조합이다.
+- `job queue`는 단순 자료구조가 아니라, 메인 스레드와 워커 스레드를 이어주는 생산자-소비자 경계다.
+
+---
+
+## 4. 요청 한 건의 전체 여정 (시퀀스 다이어그램)
 
 아래 다이어그램은 실제 코드 기준으로 정리한 최종본이다.  
 핵심 수정 포인트는 다음 세 가지다.
 
 - `http_read_request()`와 `api_handle_query()`는 워커가 실행하는 `server_handle_client()` 내부에서 호출된다.
-- `db_mutex`는 `api.c`에서 잠그고, `sql_execute()` 및 JSON 직렬화가 끝난 뒤 해제된다.
+- `db_lock`은 `api.c`에서 잠그고, `sql_execute()` 직후 해제된다. JSON 직렬화는 잠금 밖에서 수행된다. SELECT는 `rdlock`(읽기 공유), INSERT는 `wrlock`(쓰기 독점)을 사용한다.
 - `close(client_fd)`는 정상/오류 응답 이후 `thread_pool.c`의 워커 루프에서 수행된다. 단, 큐가 가득 찼을 때만 `server.c`가 즉시 `503`을 보내고 직접 닫는다.
 
 ```mermaid
@@ -125,13 +260,14 @@ sequenceDiagram
             H->>HTTP: http_send_response(4xx/5xx, error JSON)
         else valid POST /query
             HTTP-->>H: HttpRequest{body=SQL}
-            H->>API: api_handle_query(table, db_mutex, sql, ...)
-            API->>API: pthread_mutex_lock(db_mutex)
+            H->>API: api_handle_query(table, db_lock, sql, ...)
+            API->>API: sql_determine_lock_mode(sql)<br/>SELECT→rdlock / INSERT→wrlock
+            API->>API: pthread_rwlock_rdlock/wrlock(db_lock)
             API->>SQL: sql_execute(table, sql)
             SQL->>SQL: parse INSERT/SELECT\nrun table lookup or insert
             SQL-->>API: SQLResult
-            API->>API: build JSON response
-            API->>API: pthread_mutex_unlock(db_mutex)
+            API->>API: pthread_rwlock_unlock(db_lock)
+            API->>API: build JSON response (잠금 밖)
             API-->>H: ApiResult{http_status, body}
             H->>HTTP: http_send_response(status, application/json, body)
         end
@@ -148,7 +284,7 @@ sequenceDiagram
 
 ---
 
-## 4. 파일별 역할 정리
+## 5. 파일별 역할 정리
 
 | 파일 | 역할 | 핵심 개념 |
 |------|------|-----------|
@@ -156,7 +292,7 @@ sequenceDiagram
 | `server/server.c` | TCP 서버 루프, 리소스 생명주기 관리 | `socket`, `bind`, `listen`, `accept` |
 | `server/thread_pool.c` | 고정 워커 풀 + 원형 큐 | `pthread_mutex`, `pthread_cond`, circular buffer |
 | `server/http.c` | HTTP 요청 파싱, 응답 직렬화 | `recv`, `send`, Content-Length |
-| `server/api.c` | SQL 실행과 HTTP 계층 연결 | 뮤텍스 보호, JSON 직렬화 |
+| `server/api.c` | SQL 실행과 HTTP 계층 연결 | `pthread_rwlock` 보호 (SELECT: rdlock, INSERT: wrlock), JSON 직렬화 |
 | `server/json_util.c` | 동적 JSON 문자열 빌더 | `realloc`, JSON escape |
 | `sql_processor/sql.c` | SQL 파서 + 실행기 | 재귀 하강 파서 |
 | `sql_processor/table.c` | 인메모리 테이블 | 동적 배열, 선형 스캔 |
@@ -164,9 +300,9 @@ sequenceDiagram
 
 ---
 
-## 5. 데이터 구조 시각화
+## 6. 데이터 구조 시각화
 
-### 5-1. Table 구조
+### 6-1. Table 구조
 
 ```
 Table
@@ -180,7 +316,7 @@ Table
 └── pk_index: BPTree*   ← id → Record* 매핑 (O(log n) 검색)
 ```
 
-### 5-2. B+ Tree (order=4, max_keys=3)
+### 6-2. B+ Tree (order=4, max_keys=3)
 
 ```
                     [  2  |  4  ]          ← 내부 노드 (인덱스만 저장)
@@ -194,7 +330,7 @@ Table
 • 리프 연결리스트: 범위 스캔 가능 (아직 미활용)
 ```
 
-### 5-3. ThreadPool 구조
+### 6-3. ThreadPool 구조
 
 ```
 ThreadPool
@@ -269,9 +405,12 @@ sql_execute("SELECT * FROM users WHERE id >= 2;")
 목표: mutex/cond_wait 패턴으로 producer-consumer를 구현하는 방법을 이해한다.
 읽을 것: server/thread_pool.h → server/thread_pool.c
 집중 포인트:
-  • thread_pool_worker_main() 의 while 루프 (line 10~35)
-  • submit()에서 cond_signal, worker에서 cond_wait (line 93~122)
-  • stop_requested 플래그와 graceful shutdown
+  • thread_pool_worker_main()의 while 루프 (line 7~35)
+  • worker는 큐가 비면 cond_wait로 잠들고, submit()은 cond_signal로 worker를 깨운다
+    - cond_wait: line 13~16
+    - cond_signal: line 100~107
+  • stop_requested 플래그와 shutdown 시 cond_broadcast 흐름
+    - shutdown: line 113~122
 핵심 질문: mutex 없이 size/head/tail을 수정하면 무슨 일이 생기는가?
 ```
 
@@ -318,11 +457,11 @@ sql_execute("SELECT * FROM users WHERE id >= 2;")
 
 ### STEP 8 - API 레이어와 전체 연결 (api.c)
 ```
-목표: HTTP 계층과 DB 계층을 연결하는 뮤텍스 보호 패턴을 이해한다.
+목표: HTTP 계층과 DB 계층을 연결하는 rwlock 보호 패턴을 이해한다.
 읽을 것: server/api.c, server/json_util.c
 집중 포인트:
-  • api_handle_query()의 mutex_lock → sql_execute → mutex_unlock 범위
-  • api_build_success_response()의 JSON 빌딩 패턴
+  • sql_determine_lock_mode() → rdlock/wrlock 선택 → sql_execute → unlock 범위
+  • JSON 직렬화가 unlock 이후에 수행되는 이유
   • SQLStatus → HTTP status code 매핑 로직
 ```
 
@@ -353,7 +492,7 @@ sql_execute("SELECT * FROM users WHERE id >= 2;")
 |------|----------------------|
 | `client_fd` | accept()로 얻은 소켓 파일 디스크립터 (클라이언트 연결 하나) |
 | `listen_fd` | 서버가 바인딩한 소켓 (새 연결 대기용) |
-| `db_mutex` | Table에 대한 읽기/쓰기를 직렬화하는 뮤텍스 |
+| `db_lock` | Table을 보호하는 rwlock (SELECT: rdlock 공유, INSERT: wrlock 독점) |
 | `HttpRequest` | 파싱된 HTTP 요청 구조체 (method, path, body) |
 | `SQLResult` | sql_execute()의 반환값 (rows[], status, error 정보) |
 | `ApiResult` | JSON 직렬화된 응답 문자열 + HTTP 상태코드 |

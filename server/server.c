@@ -223,6 +223,16 @@ int server_run(Server *server) {
         }
 
         if (!thread_pool_submit(&server->pool, client_fd)) {
+            {
+                const char *dbg = getenv("DEBUG_QUEUE");
+                if (dbg != NULL && dbg[0] == '1') {
+                    fprintf(stderr, "[QUEUE] FULL     fd=%-4d size=%zu/%zu  → 503\n",
+                            client_fd,
+                            server->pool.size,
+                            server->pool.queue_capacity);
+                    fflush(stderr);
+                }
+            }
             char *body = server_build_error_body("queue_full", "Server is busy");
             if (body != NULL) {
                 http_send_response(client_fd, 503, "application/json; charset=utf-8", body);
