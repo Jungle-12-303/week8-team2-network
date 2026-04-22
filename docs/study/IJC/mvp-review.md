@@ -260,8 +260,3 @@ if (!thread_pool_submit(&pool, client_fd)) {
 3. **차별화 기능 추가** (선택)
    - A, B, C, D 중 1~2개 선택 후 구현
 
----
-
-**작성일:** 2026-04-22  
-**검토자:** Claude Code  
-**상태:** MVP 검수 완료 ✅
