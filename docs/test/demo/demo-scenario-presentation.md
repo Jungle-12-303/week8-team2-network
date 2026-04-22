@@ -83,8 +83,8 @@ rwlock quick demo test passed.
 
 ```text
 [3/3] API server architecture
-Summary: 20 OK | 5 503 | 0 other
-PASS
+요약: 20개 OK | 5개 503 | 0개 기타
+통과
 ```
 
 이 단계에서 확인할 포인트는 다음입니다.

@@ -34,7 +34,7 @@ trap cleanup EXIT INT TERM
 cd "$REPO_ROOT"
 
 printf '==========================================\n'
-printf '[1/3] Internal DB engine and API server link\n'
+printf '[1/3] 내부 DB 엔진과 API 서버 연결\n'
 printf '==========================================\n'
 
 make db_server >/dev/null
@@ -42,7 +42,7 @@ make db_server >/dev/null
 SERVER_PID=$!
 
 wait_for_server || {
-    printf 'Failed to start server on port %s\n' "$PORT" >&2
+    printf '서버를 %s 포트에서 시작하지 못했습니다\n' "$PORT" >&2
     exit 1
 }
 
@@ -52,21 +52,21 @@ SELECT * FROM users WHERE id = 1;
 EOF
 
 printf '\n==========================================\n'
-printf '[2/3] RW lock concurrency smoke test\n'
+printf '[2/3] RW 락 동시성 스모크 테스트\n'
 printf '==========================================\n'
-printf 'This stage reuses the server from step 1 and usually finishes within a few seconds.\n'
+printf '이 단계는 1단계에서 띄운 서버를 그대로 재사용하며, 보통 몇 초 안에 끝납니다.\n'
 sh scripts/tests/concurrency/rwlock_quick_demo_test.sh "$PORT"
 
 if [ "${DEMO_INCLUDE_LONG_CONCURRENCY:-0}" = "1" ]; then
-    printf '\n[optional] Long concurrency stress test (slow, appendix only)\n'
+    printf '\n[선택] 긴 동시성 스트레스 테스트 (느리므로 부록용)\n'
     sh scripts/rwlock_stress_test.sh 18081
 fi
 
 printf '\n==========================================\n'
-printf '[3/3] API server architecture\n'
+printf '[3/3] API 서버 아키텍처\n'
 printf '==========================================\n'
 sh scripts/multi_client_demo.sh 19083
 
 printf '\n==========================================\n'
-printf 'Demo finished successfully\n'
+printf '데모가 정상적으로 완료되었습니다\n'
 printf '==========================================\n'

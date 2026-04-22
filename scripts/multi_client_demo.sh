@@ -44,7 +44,7 @@ wait_for_server() {
 printf '=== 다중 클라이언트 동작 시연 ===\n\n'
 printf '설정: workers=%d  queue=%d  total_capacity=%d\n' \
     "$WORKERS" "$QUEUE" "$TOTAL_CAPACITY"
-printf '클라이언트: %d개 동시 요청 → %d OK 예상, %d→ 503 예상\n\n' \
+printf '클라이언트: %d개 동시 요청 → %d개 OK 예상, %d개 503 예상\n\n' \
     "$N_CLIENTS" "$TOTAL_CAPACITY" "$((N_CLIENTS - TOTAL_CAPACITY))"
 
 # STEP 1: 서버 시작 (DEBUG_QUEUE=1, 실제 설정)
@@ -58,7 +58,7 @@ export DEBUG_QUEUE=1
     >"$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
-wait_for_server || { printf 'FAIL: 서버가 준비되지 않았습니다\n' >&2; exit 1; }
+wait_for_server || { printf '실패: 서버가 준비되지 않았습니다\n' >&2; exit 1; }
 printf '       서버 준비 완료 (PID=%s)\n' "$SERVER_PID"
 printf '       [QUEUE] 로그는 아래 "서버 로그" 섹션에 출력됩니다\n\n'
 
@@ -139,10 +139,10 @@ for i, (s, t) in enumerate(results):
         tag = f'503     ({t:.2f}s)  ← 큐 포화'
     else:
         tag = f'{s}     ({t:.2f}s)'
-    print(f'  Client {i+1:2d}: {tag}')
+    print(f'  클라이언트 {i+1:2d}: {tag}')
 
 print()
-print(f'Summary: {ok_count} OK | {err_count} 503 | {other} other')
+print(f'요약: {ok_count}개 OK | {err_count}개 503 | {other}개 기타')
 print(f'__ok={ok_count}')
 print(f'__err={err_count}')
 PYEOF
@@ -168,7 +168,7 @@ printf '  OK(200) : %s / %d\n' "$OK_COUNT" "$TOTAL_CAPACITY"
 printf '  503     : %s / %d\n' "$ERR_COUNT" "$((N_CLIENTS - TOTAL_CAPACITY))"
 
 if [ "$OK_COUNT" -eq "$TOTAL_CAPACITY" ] && [ "$ERR_COUNT" -eq "$((N_CLIENTS - TOTAL_CAPACITY))" ]; then
-    printf '\nPASS\n'
+    printf '\n통과\n'
 else
-    printf '\nNOTE: 타이밍에 따라 결과가 달라질 수 있습니다.\n'
+    printf '\n주의: 타이밍에 따라 결과가 달라질 수 있습니다.\n'
 fi

@@ -16,7 +16,7 @@ fail() {
 assert_ok() {
     response=$1
     printf '%s' "$response" | grep -Fq '"ok":true' || {
-        printf 'Unexpected response: %s\n' "$response" >&2
+        printf '예상과 다른 응답입니다: %s\n' "$response" >&2
         exit 1
     }
 }
@@ -28,7 +28,7 @@ wait_for_server() {
         return 0
     fi
 
-    fail "Server is not ready on port ${PORT}"
+    fail "서버가 ${PORT} 포트에서 준비되지 않았습니다"
 }
 
 trap cleanup EXIT INT TERM
@@ -60,8 +60,8 @@ final_response="$(curl -sS -X POST "http://localhost:${PORT}/query" \
     -H "Content-Type: text/plain" \
     --data-raw "SELECT * FROM users;")"
 printf '%s' "$final_response" | grep -Fq '"row_count":3' || {
-    printf 'Unexpected final response: %s\n' "$final_response" >&2
+    printf '최종 응답이 예상과 다릅니다: %s\n' "$final_response" >&2
     exit 1
 }
 
-printf '%s\n' "rwlock quick demo test passed."
+printf '%s\n' "RW 락 빠른 데모 테스트가 통과했습니다."
