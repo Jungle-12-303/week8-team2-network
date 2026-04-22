@@ -53,13 +53,44 @@ int main(int argc, char **argv) {
     config.queue_capacity = 16;
     config.backlog = 32;
 
+    if (argc > 2) {
+        char *end_ptr = NULL;
+        unsigned long v = strtoul(argv[2], &end_ptr, 10);
+        if (end_ptr == argv[2] || *end_ptr != '\0' || v == 0) {
+            fprintf(stderr, "Invalid worker_count: %s\n", argv[2]);
+            return 1;
+        }
+        config.worker_count = (size_t)v;
+    }
+
+    if (argc > 3) {
+        char *end_ptr = NULL;
+        unsigned long v = strtoul(argv[3], &end_ptr, 10);
+        if (end_ptr == argv[3] || *end_ptr != '\0' || v == 0) {
+            fprintf(stderr, "Invalid queue_capacity: %s\n", argv[3]);
+            return 1;
+        }
+        config.queue_capacity = (size_t)v;
+    }
+
+    if (argc > 4) {
+        char *end_ptr = NULL;
+        unsigned long v = strtoul(argv[4], &end_ptr, 10);
+        if (end_ptr == argv[4] || *end_ptr != '\0' || v == 0 || v > 128) {
+            fprintf(stderr, "Invalid backlog: %s\n", argv[4]);
+            return 1;
+        }
+        config.backlog = (int)v;
+    }
+
     server = server_create(&config);
     if (server == NULL) {
         fprintf(stderr, "Failed to initialize server.\n");
         return 1;
     }
 
-    printf("Listening on port %u\n", config.port);
+    printf("Listening on port %u (workers=%zu queue=%zu backlog=%d)\n",
+           config.port, config.worker_count, config.queue_capacity, config.backlog);
     server_run(server);
     server_destroy(server);
     return 0;
