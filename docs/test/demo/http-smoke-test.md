@@ -8,8 +8,8 @@
 
 `scripts/smoke_test.sh`는 이 흐름을 확인합니다.
 
-- `INSERT INTO users VALUES ('Alice', 20);`
-- `SELECT * FROM users;`
+- `INSERT INTO users VALUES ('Bob', 20);`
+- `SELECT * FROM users WHERE id = <inserted_id>;`
 
 즉, 이 테스트는 다음을 확인합니다.
 
@@ -22,6 +22,9 @@
 ## 수동 실행 전 준비
 
 서버를 먼저 실행해야 합니다.
+
+메모리 기반 서버라서, 서버를 껐다가 다시 켜면 기존 row가 모두 초기화됩니다.
+예전 테스트 데이터가 많이 쌓였으면 먼저 재시작한 뒤 확인하세요.
 
 ### Docker로 실행
 
@@ -55,13 +58,13 @@ sh scripts/smoke_test.sh
 
 ## 기대 결과
 
-현재 스크립트는 응답 본문을 확인하고, `ok`, `action`, `Alice`가 없으면 실패합니다.
+현재 스크립트는 응답 본문을 확인하고, `ok`, `action`, `Bob`과 `inserted_id`가 없으면 실패합니다.
 출력은 `INSERT`, `SELECT` 구분선과 함께 줄바꿈된 JSON 형태로 보여 줍니다.
 
 실행하면 요청별 응답 본문도 그대로 출력합니다.
 
 - 첫 번째 요청이 `INSERT` 성공 응답처럼 보인다
-- 두 번째 요청이 `SELECT` 성공 응답처럼 보인다
+- 두 번째 요청이 방금 넣은 `id`만 다시 조회해서 한 줄짜리 `SELECT` 응답처럼 보인다
 
 ## 수동으로 직접 확인하는 방법
 
@@ -70,7 +73,7 @@ sh scripts/smoke_test.sh
 ```bash
 curl -v -X POST http://localhost:8080/query \
   -H "Content-Type: text/plain" \
-  --data "INSERT INTO users VALUES ('Alice', 20);"
+  --data "INSERT INTO users VALUES ('Bob', 20);"
 ```
 
 확인 포인트:
@@ -85,7 +88,7 @@ curl -v -X POST http://localhost:8080/query \
 ```bash
 curl -v -X POST http://localhost:8080/query \
   -H "Content-Type: text/plain" \
-  --data "SELECT * FROM users;"
+  --data "SELECT * FROM users WHERE id = 1;"
 ```
 
 확인 포인트:
@@ -94,7 +97,8 @@ curl -v -X POST http://localhost:8080/query \
 - JSON 응답
 - `ok:true`
 - `action:"select"`
-- `rows` 안에 `Alice`가 보이는지 확인
+- `rows`가 너무 길게 늘어나지 않음
+- `rows` 안에 방금 넣은 row가 보이는지 확인
 
 ### 3) 잘못된 메서드 확인
 

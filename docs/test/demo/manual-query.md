@@ -16,10 +16,12 @@
 현재 이 프로젝트에서 직접 넣어 볼 수 있는 SQL은 아래입니다.
 
 - `INSERT INTO users VALUES ('Alice', 20);`
+- `INSERT INTO users VALUES ('Bob', 30);`
+- `INSERT INTO users VALUES ('Carol', 25);`
 - `SELECT * FROM users;`
 - `SELECT * FROM users WHERE id = 1;`
 - `SELECT * FROM users WHERE id >= 10;`
-- `SELECT * FROM users WHERE name = 'Alice';`
+- `SELECT * FROM users WHERE name = 'Bob';`
 - `SELECT * FROM users WHERE age = 20;`
 - `SELECT * FROM users WHERE age > 20;`
 - `SELECT * FROM users WHERE age <= 20;`
@@ -42,6 +44,9 @@
 docker compose up --build
 ```
 
+메모리 기반 서버라서, 서버를 껐다가 다시 켜면 기존 row가 모두 초기화됩니다.
+예전 테스트 데이터가 너무 많이 쌓였으면 먼저 서버를 재시작한 뒤 시작하면 됩니다.
+
 ### 2) 수동 쿼리 도구 실행
 
 대화형으로 실행:
@@ -54,11 +59,11 @@ sh scripts/manual_query.sh 8080
 
 ```bash
 INSERT INTO users VALUES ('Alice', 20);
-SELECT * FROM users;
+INSERT INTO users VALUES ('Bob', 30);
+INSERT INTO users VALUES ('Carol', 25);
 SELECT * FROM users WHERE id = 1;
-SELECT * FROM users WHERE id >= 10;
-SELECT * FROM users WHERE name = 'Alice';
-SELECT * FROM users WHERE age = 20;
+SELECT * FROM users WHERE name = 'Bob';
+SELECT * FROM users WHERE age = 25;
 SELECT * FROM users WHERE age > 20;
 SELECT * FROM users WHERE age <= 20;
 ```
@@ -68,8 +73,8 @@ SELECT * FROM users WHERE age <= 20;
 ### 3) 한 번에 한 쿼리만 실행
 
 ```bash
-sh scripts/manual_query.sh 8080 "INSERT INTO users VALUES ('Alice', 20);"
-sh scripts/manual_query.sh 8080 "SELECT * FROM users;"
+sh scripts/manual_query.sh 8080 "INSERT INTO users VALUES ('Bob', 30);"
+sh scripts/manual_query.sh 8080 "SELECT * FROM users WHERE id = 1;"
 ```
 
 ## 기대 결과
