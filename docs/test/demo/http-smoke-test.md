@@ -25,16 +25,19 @@
 
 ### Docker로 실행
 
+이거 추천함요
+```bash
+docker compose up --build
+```
+
+또는
+
 ```bash
 docker build -t week8-team2-network .
 docker run --rm -p 8080:8080 week8-team2-network
 ```
 
-또는:
 
-```bash
-docker compose up --build
-```
 
 실행 후 로그에 아래 문구가 보이면 됩니다.
 
@@ -52,8 +55,10 @@ sh scripts/smoke_test.sh
 
 ## 기대 결과
 
-현재 스크립트는 응답 본문을 출력만 하고 검증을 아주 엄격하게 하지는 않습니다.
-그래도 사람이 볼 때는 아래 흐름이 보여야 합니다.
+현재 스크립트는 응답 본문을 확인하고, `ok`, `action`, `Alice`가 없으면 실패합니다.
+출력은 `INSERT`, `SELECT` 구분선과 함께 줄바꿈된 JSON 형태로 보여 줍니다.
+
+실행하면 요청별 응답 본문도 그대로 출력합니다.
 
 - 첫 번째 요청이 `INSERT` 성공 응답처럼 보인다
 - 두 번째 요청이 `SELECT` 성공 응답처럼 보인다
@@ -116,8 +121,9 @@ curl -v -X POST http://localhost:8080/unknown \
 
 ## 같이 보면 좋은 파일
 
-- [scripts/smoke_test.sh](/D:/03Dev/05Jungle/SuYo/Week8/week8-team2-network/scripts/smoke_test.sh)
-- [server/server.c](/D:/03Dev/05Jungle/SuYo/Week8/week8-team2-network/server/server.c)
-- [server/http.c](/D:/03Dev/05Jungle/SuYo/Week8/week8-team2-network/server/http.c)
-- [server/api.c](/D:/03Dev/05Jungle/SuYo/Week8/week8-team2-network/server/api.c)
+- [scripts/smoke_test.sh](../../../scripts/smoke_test.sh)
+- [scripts/http_integration_test.sh](../../../scripts/http_integration_test.sh)
+- [server/server.c](../../../server/server.c)
+- [server/http.c](../../../server/http.c)
+- [server/api.c](../../../server/api.c)
 

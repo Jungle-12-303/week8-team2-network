@@ -1,21 +1,21 @@
-# Task Folder Guide
+# 작업 카드 안내서
 
-## Purpose
+## 목적
 
-This folder is for task cards that break implementation work into small, actionable pieces.
+이 폴더는 구현 작업을 작고 실행 가능한 카드로 나누기 위한 곳입니다.
 
-## Rules
+## 규칙
 
-- One file equals one task card
-- Keep cards small
-- Prefer titles that end with `~함`
-- Always include completion criteria and validation steps
-- Always include the responsible persona and touched files
-- Always write the immediate predecessor and successor tasks
-- If a card crosses persona boundaries, write the interface explicitly
-- Do not mix implementation, testing, and docs work in one card unless the card is intentionally small
+- 파일 하나가 작업 카드 하나다
+- 카드는 작게 유지한다
+- 제목은 가능하면 `~함`으로 끝내는 것을 권장한다
+- 완료 기준과 검증 방법을 반드시 포함한다
+- 담당 페르소나와 수정 파일을 반드시 적는다
+- 바로 직전 카드와 다음 카드를 함께 적는다
+- 여러 페르소나가 걸치는 작업이면 인터페이스를 명시한다
+- 구현, 테스트, 문서를 섞지 않는다
 
-## Recommended Template
+## 권장 템플릿
 
 ```md
 # 작업 제목함
@@ -33,21 +33,21 @@ This folder is for task cards that break implementation work into small, actiona
 ## 메모
 ```
 
-## Split Rules
+## 분리 기준
 
-Split a card further if any of these apply:
+다음 중 하나라도 해당하면 카드를 더 잘게 나눈다.
 
-- It will take a long time
-- It needs multiple tests
-- Someone else could work on it in parallel
-- It mixes implementation and refactoring
-- It also includes documentation changes
-- It touches more than one persona without a clear interface
+- 오래 걸린다
+- 여러 테스트가 필요하다
+- 다른 사람이 병렬로 할 수 있다
+- 구현과 리팩터링이 섞인다
+- 문서 변경도 함께 들어간다
+- 여러 페르소나가 관련되지만 명확한 인터페이스가 없다
 
-## Workflow
+## 작업 흐름
 
-1. Define the big direction in `plan`
-2. Break implementation into small cards in `task`
-3. Write completion criteria for each card
-4. Mark cards done as you work
-5. Update both the card and `07-test-and-quality-plan.md` when test coverage changes
+1. `plan`에서 큰 방향을 정한다
+2. 구현을 작은 `task` 카드로 쪼갠다
+3. 각 카드의 완료 기준을 쓴다
+4. 작업하면서 카드를 완료 처리한다
+5. 테스트 범위가 바뀌면 `07-test-and-quality-plan.md`도 함께 갱신한다

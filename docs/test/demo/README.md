@@ -1,11 +1,12 @@
-# Test Demo
+# 테스트 데모 안내
 
 이 폴더는 현재 구현되어 있는 테스트를 사람이 직접 따라 해 볼 수 있게 설명하는 곳입니다.
 
 ## 현재 있는 테스트
 
-- [Unit Tests](unit-tests.md)
-- [HTTP Smoke Test and Manual Check](http-smoke-test.md)
+- [단위 테스트](unit-tests.md)
+- [HTTP 스모크 테스트와 수동 확인](http-smoke-test.md)
+- [HTTP 통합 테스트](http-integration-test.md)
 
 ## 원칙
 
@@ -17,5 +18,4 @@
 
 - `sql_processor/unit_test.c`는 이미 구현되어 있다
 - `scripts/smoke_test.sh`는 이미 구현되어 있다
-- 별도의 HTTP 통합 테스트 스크립트는 아직 없다
-
+- `scripts/http_integration_test.sh`는 이미 구현되어 있다

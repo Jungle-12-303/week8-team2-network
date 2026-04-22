@@ -1,23 +1,23 @@
-# week8-team2-network
+# 8주차 팀 2 네트워크
 
-In-memory DBMS API server written in C.
+이 프로젝트는 C로 작성한 메모리 기반 DBMS API 서버입니다.
 
-This project exposes a single HTTP endpoint, `POST /query`, and forwards SQL statements to the existing `sql_processor` package.
+서버는 단 하나의 HTTP 엔드포인트 `POST /query`를 제공하고, 요청 본문으로 받은 SQL을 기존 `sql_processor` 패키지에 전달합니다.
 
-## What is implemented
+## 구현된 내용
 
-- HTTP server entrypoint in C
-- `POST /query` only
-- Raw socket request parsing with `Content-Length`
-- Bounded worker thread pool
-- SQL execution through `sql_processor`
-- JSON response serialization
-- Graceful shutdown with a termination flag
-- Docker build and run support
+- C 기반 HTTP 서버 진입점
+- `POST /query`만 허용
+- `Content-Length`를 사용하는 원시 소켓 요청 파싱
+- 제한된 작업자 스레드 풀
+- `sql_processor`를 통한 SQL 실행
+- JSON 응답 직렬화
+- 종료 플래그 기반 graceful shutdown
+- Docker 빌드 및 실행 지원
 
-## Build
+## 빌드
 
-### Local
+### 로컬
 
 ```bash
 make db_server
@@ -29,9 +29,9 @@ make db_server
 docker build -t week8-team2-network .
 ```
 
-## Run
+## 실행
 
-### Local
+### 로컬
 
 ```bash
 ./db_server 8080
@@ -43,29 +43,31 @@ docker build -t week8-team2-network .
 docker run --rm -p 8080:8080 week8-team2-network
 ```
 
-Or:
+또는:
 
 ```bash
 docker compose up --build
 ```
 
-## API
+## API 사용 예시
 
-### Request
+### INSERT
 
-삽입
 ```bash
 curl -X POST http://localhost:8080/query \
   -H "Content-Type: text/plain" \
   --data "INSERT INTO users VALUES ('Alice', 20);"
 ```
 
-조회
+### SELECT
+
 ```bash
-curl -v -X POST http://localhost:8080/query -H "Content-Type: text/plain" --data-raw "SELECT * FROM users;"
+curl -v -X POST http://localhost:8080/query \
+  -H "Content-Type: text/plain" \
+  --data-raw "SELECT * FROM users;"
 ```
 
-### Supported SQL
+## 지원하는 SQL
 
 - `INSERT INTO users VALUES ('Alice', 20);`
 - `SELECT * FROM users;`
@@ -74,15 +76,29 @@ curl -v -X POST http://localhost:8080/query -H "Content-Type: text/plain" --data
 - `SELECT * FROM users WHERE name = 'Alice';`
 - `SELECT * FROM users WHERE age > 20;`
 
-## Smoke test
+## 테스트
 
-After starting the server, run:
+### 스모크 테스트
+
+서버를 띄운 뒤 아래 명령을 실행한다.
 
 ```bash
 sh scripts/smoke_test.sh
 ```
 
-## Project docs
+### 전체 자동화 테스트
+
+```bash
+make test
+```
+
+### HTTP 통합 테스트만 실행
+
+```bash
+sh scripts/http_integration_test.sh
+```
+
+## 프로젝트 문서
 
 - [`docs/plan/00-plan-manager.md`](docs/plan/00-plan-manager.md)
 - [`docs/plan/06-implementation-order.md`](docs/plan/06-implementation-order.md)

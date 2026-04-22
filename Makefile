@@ -26,4 +26,13 @@ db_server: $(SERVER_OBJS)
 clean:
 	rm -f $(SERVER_OBJS) db_server
 
-.PHONY: all clean
+test-unit:
+	$(MAKE) -C sql_processor unit_test
+	cd sql_processor && ./unit_test
+
+test-http:
+	sh scripts/http_integration_test.sh
+
+test: test-unit test-http
+
+.PHONY: all clean test-unit test-http test
