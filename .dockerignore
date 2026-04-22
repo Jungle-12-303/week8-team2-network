@@ -1,0 +1,8 @@
+.git
+.gitignore
+docs
+sql_processor/docs
+sql_processor/*.o
+server/*.o
+db_server
+*.log

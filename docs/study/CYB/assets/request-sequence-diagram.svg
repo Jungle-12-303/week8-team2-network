@@ -1,0 +1,254 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2320" height="1460" viewBox="0 0 2320 1460" role="img" aria-labelledby="title desc">
+  <title id="title">Mini DBMS Server request sequence diagram</title>
+  <desc id="desc">Readable sequence diagram for one HTTP query request through server.c, thread_pool.c, http.c, api.c, and sql.c/table.c.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#1f2937" />
+    </marker>
+    <marker id="arrow-soft" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#0f766e" />
+    </marker>
+    <style>
+      text {
+        font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+        fill: #111827;
+      }
+      .frame {
+        fill: #f8fafc;
+        stroke: #d6e0ea;
+        stroke-width: 2;
+      }
+      .title {
+        font-size: 28px;
+        font-weight: 700;
+      }
+      .subtitle {
+        font-size: 16px;
+        fill: #475569;
+      }
+      .lane {
+        fill: #ffffff;
+        stroke: #bfd0e3;
+        stroke-width: 1.8;
+      }
+      .lane-label {
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .lane-sub {
+        font-size: 13px;
+        fill: #64748b;
+      }
+      .lifeline {
+        stroke: #c9d6e3;
+        stroke-width: 2;
+        stroke-dasharray: 9 9;
+      }
+      .call {
+        stroke: #1f2937;
+        stroke-width: 3;
+        fill: none;
+        marker-end: url(#arrow);
+      }
+      .return {
+        stroke: #0f766e;
+        stroke-width: 3;
+        fill: none;
+        stroke-dasharray: 10 8;
+        marker-end: url(#arrow-soft);
+      }
+      .loop {
+        stroke: #1f2937;
+        stroke-width: 3;
+        fill: none;
+        marker-end: url(#arrow);
+      }
+      .label-box {
+        fill: #ffffff;
+        stroke: #dbe4ee;
+        stroke-width: 1;
+        rx: 10;
+      }
+      .label {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .label-small {
+        font-size: 12px;
+        fill: #475569;
+      }
+      .note-warn {
+        fill: #fff7ed;
+        stroke: #fb923c;
+        stroke-width: 1.6;
+        rx: 14;
+      }
+      .note-blue {
+        fill: #eff6ff;
+        stroke: #60a5fa;
+        stroke-width: 1.6;
+        rx: 14;
+      }
+      .note-green {
+        fill: #ecfdf5;
+        stroke: #34d399;
+        stroke-width: 1.6;
+        rx: 14;
+      }
+      .note-title {
+        font-size: 15px;
+        font-weight: 700;
+      }
+      .note-text {
+        font-size: 13px;
+        fill: #475569;
+      }
+      .branch {
+        fill: none;
+        stroke: #94a3b8;
+        stroke-width: 2;
+        stroke-dasharray: 8 7;
+      }
+      .branch-label {
+        font-size: 14px;
+        font-weight: 700;
+        fill: #334155;
+      }
+      .footer {
+        font-size: 13px;
+        fill: #64748b;
+      }
+    </style>
+  </defs>
+
+  <rect width="2320" height="1460" fill="#ffffff" />
+  <rect x="28" y="24" width="2264" height="1412" rx="28" class="frame" />
+
+  <text x="72" y="74" class="title">Mini DBMS Server - 요청 한 건의 최종 시퀀스 다이어그램</text>
+  <text x="72" y="106" class="subtitle">가독성 개선판: 캔버스와 레인 간격을 확장하고, 각 단계 라벨을 독립 박스로 분리해 겹침을 제거했다.</text>
+
+  <rect x="70" y="150" width="180" height="76" rx="16" class="lane" />
+  <rect x="380" y="150" width="180" height="76" rx="16" class="lane" />
+  <rect x="690" y="150" width="180" height="76" rx="16" class="lane" />
+  <rect x="1000" y="150" width="180" height="76" rx="16" class="lane" />
+  <rect x="1310" y="150" width="180" height="76" rx="16" class="lane" />
+  <rect x="1620" y="150" width="180" height="76" rx="16" class="lane" />
+  <rect x="1930" y="150" width="220" height="76" rx="16" class="lane" />
+
+  <text x="160" y="180" text-anchor="middle" class="lane-label">Client</text>
+  <text x="160" y="202" text-anchor="middle" class="lane-sub">HTTP caller</text>
+
+  <text x="470" y="180" text-anchor="middle" class="lane-label">server.c</text>
+  <text x="470" y="202" text-anchor="middle" class="lane-sub">accept loop</text>
+
+  <text x="780" y="180" text-anchor="middle" class="lane-label">thread_pool.c</text>
+  <text x="780" y="202" text-anchor="middle" class="lane-sub">queue + worker</text>
+
+  <text x="1090" y="180" text-anchor="middle" class="lane-label">server.c</text>
+  <text x="1090" y="202" text-anchor="middle" class="lane-sub">server_handle_client</text>
+
+  <text x="1400" y="180" text-anchor="middle" class="lane-label">http.c</text>
+  <text x="1400" y="202" text-anchor="middle" class="lane-sub">parse / send</text>
+
+  <text x="1710" y="180" text-anchor="middle" class="lane-label">api.c</text>
+  <text x="1710" y="202" text-anchor="middle" class="lane-sub">mutex + JSON</text>
+
+  <text x="2040" y="180" text-anchor="middle" class="lane-label">sql.c / table.c</text>
+  <text x="2040" y="202" text-anchor="middle" class="lane-sub">parse + execute</text>
+
+  <line x1="160" y1="226" x2="160" y2="1240" class="lifeline" />
+  <line x1="470" y1="226" x2="470" y2="1240" class="lifeline" />
+  <line x1="780" y1="226" x2="780" y2="1240" class="lifeline" />
+  <line x1="1090" y1="226" x2="1090" y2="1240" class="lifeline" />
+  <line x1="1400" y1="226" x2="1400" y2="1240" class="lifeline" />
+  <line x1="1710" y1="226" x2="1710" y2="1240" class="lifeline" />
+  <line x1="2040" y1="226" x2="2040" y2="1240" class="lifeline" />
+
+  <path d="M 160 280 H 460" class="call" />
+  <rect x="240" y="242" width="150" height="30" class="label-box" />
+  <text x="315" y="262" text-anchor="middle" class="label">1. TCP connect</text>
+
+  <path d="M 470 340 h 46 v 28 h -46" class="loop" />
+  <rect x="525" y="328" width="170" height="30" class="label-box" />
+  <text x="610" y="348" text-anchor="middle" class="label">2. accept(client_fd)</text>
+
+  <path d="M 470 410 H 770" class="call" />
+  <rect x="525" y="372" width="210" height="30" class="label-box" />
+  <text x="630" y="392" text-anchor="middle" class="label">3. thread_pool_submit(client_fd)</text>
+
+  <rect x="360" y="450" width="420" height="102" class="note-warn" />
+  <text x="386" y="482" class="note-title">분기 A: queue full</text>
+  <text x="386" y="510" class="note-text">server.c가 즉시 HTTP 503 error JSON을 보낸다.</text>
+  <text x="386" y="534" class="note-text">이 경우에만 server.c가 직접 close(client_fd)를 수행한다.</text>
+
+  <path d="M 780 620 H 1080" class="call" />
+  <rect x="844" y="582" width="172" height="30" class="label-box" />
+  <text x="930" y="602" text-anchor="middle" class="label">4. worker dequeues client_fd</text>
+
+  <path d="M 1090 700 H 1390" class="call" />
+  <rect x="1148" y="662" width="184" height="30" class="label-box" />
+  <text x="1240" y="682" text-anchor="middle" class="label">5. http_read_request(client_fd, ...)</text>
+
+  <rect x="1760" y="520" width="390" height="110" class="note-blue" />
+  <text x="1786" y="552" class="note-title">분기 B: invalid HTTP request</text>
+  <text x="1786" y="580" class="note-text">http.c에서 method, path, header, body 검증 실패 시</text>
+  <text x="1786" y="604" class="note-text">error_status + message를 만들고 4xx/5xx 응답으로 종료한다.</text>
+
+  <path d="M 1400 920 H 1700" class="call" />
+  <rect x="1450" y="882" width="200" height="30" class="label-box" />
+  <text x="1550" y="902" text-anchor="middle" class="label">6. valid POST /query -&gt; api_handle_query(...)</text>
+
+  <path d="M 1710 980 h 44 v 28 h -44" class="loop" />
+  <rect x="1766" y="968" width="220" height="30" class="label-box" />
+  <text x="1876" y="988" text-anchor="middle" class="label">7. pthread_mutex_lock(db_mutex)</text>
+
+  <path d="M 1710 1060 H 2030" class="call" />
+  <rect x="1788" y="1022" width="164" height="30" class="label-box" />
+  <text x="1870" y="1042" text-anchor="middle" class="label">8. sql_execute(table, sql)</text>
+
+  <rect x="1880" y="1110" width="320" height="112" class="note-green" />
+  <text x="1906" y="1142" class="note-title">9. SQL parse + execute</text>
+  <text x="1906" y="1170" class="note-text">INSERT / SELECT를 구문 해석하고</text>
+  <text x="1906" y="1194" class="note-text">table lookup 또는 insert를 수행한다.</text>
+
+  <path d="M 2030 930 H 1720" class="return" />
+  <rect x="1844" y="892" width="124" height="30" class="label-box" />
+  <text x="1906" y="912" text-anchor="middle" class="label">10. SQLResult</text>
+
+  <path d="M 1710 860 h 44 v 28 h -44" class="loop" />
+  <rect x="1766" y="848" width="208" height="30" class="label-box" />
+  <text x="1870" y="868" text-anchor="middle" class="label">11. JSON build + status mapping</text>
+
+  <path d="M 1710 790 h 44 v 28 h -44" class="loop" />
+  <rect x="1766" y="778" width="232" height="30" class="label-box" />
+  <text x="1882" y="798" text-anchor="middle" class="label">12. pthread_mutex_unlock(db_mutex)</text>
+
+  <path d="M 1700 740 H 1100" class="return" />
+  <rect x="1324" y="702" width="162" height="30" class="label-box" />
+  <text x="1405" y="722" text-anchor="middle" class="label">13. ApiResult{http_status, body}</text>
+
+  <path d="M 1090 820 H 1390" class="call" />
+  <rect x="1162" y="782" width="156" height="30" class="label-box" />
+  <text x="1240" y="802" text-anchor="middle" class="label">14. http_send_response(...)</text>
+
+  <path d="M 1390 900 H 170" class="return" />
+  <rect x="694" y="862" width="172" height="30" class="label-box" />
+  <text x="780" y="882" text-anchor="middle" class="label">15. HTTP response JSON</text>
+
+  <path d="M 1090 1000 H 790" class="return" />
+  <rect x="848" y="962" width="174" height="30" class="label-box" />
+  <text x="935" y="982" text-anchor="middle" class="label">16. handler returns</text>
+
+  <path d="M 780 1080 h 44 v 28 h -44" class="loop" />
+  <rect x="836" y="1068" width="144" height="30" class="label-box" />
+  <text x="908" y="1088" text-anchor="middle" class="label">17. close(client_fd)</text>
+
+  <path d="M 780 1160 H 170" class="return" />
+  <rect x="398" y="1122" width="202" height="30" class="label-box" />
+  <text x="499" y="1142" text-anchor="middle" class="label">18. TCP connection closed</text>
+
+  <path d="M 315 360 H 2230 V 1290 H 315" class="branch" />
+  <text x="326" y="352" class="branch-label">정상 처리 main path</text>
+
+  <text x="70" y="1372" class="footer">Source-aligned with server/server.c, server/thread_pool.c, server/http.c, server/api.c, and sql_processor/sql.c</text>
+</svg>

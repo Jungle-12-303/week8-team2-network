@@ -1,0 +1,17 @@
+# Repository build outputs
+/db_server
+/main
+/a.out
+
+# Compiled objects and libraries
+*.o
+*.a
+*.so
+*.dylib
+
+# Debug and test artifacts
+*.dSYM/
+*.log
+
+# macOS metadata
+.DS_Store
