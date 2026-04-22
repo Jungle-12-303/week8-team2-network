@@ -19,7 +19,7 @@
 4. `sh scripts/tests/http/protocol-edge-cases.sh`
 5. `sh scripts/tests/http/timeout-test.sh`
 6. `sh scripts/tests/http/manual-query.sh 8080`
-7. `sh scripts/tests/concurrency/rwlock-stress-test.sh`
+7. `sh scripts/tests/concurrency/bucket-lock-stress-test.sh`
 
 ## 기존 루트 스크립트
 
@@ -31,6 +31,7 @@
 - `scripts/http_protocol_edge_cases.sh`
 - `scripts/http_timeout_test.sh`
 - `scripts/manual_query.sh`
-- `scripts/rwlock_stress_test.sh`
+- `scripts/bucket_lock_stress_test.sh`
+- `scripts/rwlock_stress_test.sh`  - 호환용 래퍼
 
 실제 테스트 코드는 이제 `tests/` 하위 스크립트를 기준으로 보는 것이 가장 정확하다.

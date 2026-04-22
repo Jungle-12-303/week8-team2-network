@@ -22,7 +22,8 @@
 
 ## 동시성
 
-- `concurrency/rwlock-stress-test.sh`
+- `concurrency/bucket-lock-stress-test.sh`
+- `concurrency/rwlock-stress-test.sh`  - 호환용 래퍼
   - 버킷 락 기반 동시성 동작과 종료 처리를 확인한다.
 
 ## 권장 실행 순서
@@ -33,7 +34,7 @@
 4. `sh scripts/tests/http/protocol-edge-cases.sh`
 5. `sh scripts/tests/http/timeout-test.sh`
 6. `sh scripts/tests/http/manual-query.sh 8080`
-7. `sh scripts/tests/concurrency/rwlock-stress-test.sh`
+7. `sh scripts/tests/concurrency/bucket-lock-stress-test.sh`
 
 ## 참고
 

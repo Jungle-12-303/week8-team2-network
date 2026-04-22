@@ -1,8 +1,8 @@
-﻿# 버킷 락 동시성 테스트 안내
+# 버킷 락 동시성 테스트 안내
 
 이 문서는 현재 구현된 해시 버킷 단위 `pthread_rwlock_t`가 실제로 잘 동작하는지 확인하는 방법을 설명한다.
 
-> 파일 이름은 `rwlock-test.md`로 남겨 두었지만, 지금 내용은 **전역 락**이 아니라 **버킷 락** 기준이다.
+> 이 문서는 해시 버킷 단위 동시성 테스트를 설명한다.
 
 ## 무엇을 확인하나
 
@@ -13,8 +13,8 @@
 
 ## 실행 스크립트
 
-- `sh scripts/tests/concurrency/rwlock-stress-test.sh`
-- 호환용 루트 래퍼: `sh scripts/rwlock_stress_test.sh`
+- `sh scripts/tests/concurrency/bucket-lock-stress-test.sh`
+- 호환용 루트 래퍼: `sh scripts/bucket_lock_stress_test.sh`
 
 ## 현재 구현 기준
 
@@ -46,4 +46,4 @@
 - [`sql_processor/table.c`](../../../sql_processor/table.c)
 - [`server/api.c`](../../../server/api.c)
 - [`server/server.c`](../../../server/server.c)
-- [`scripts/tests/concurrency/rwlock-stress-test.sh`](../../../scripts/tests/concurrency/rwlock-stress-test.sh)
+- [`scripts/tests/concurrency/bucket-lock-stress-test.sh`](../../../scripts/tests/concurrency/bucket-lock-stress-test.sh)

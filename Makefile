@@ -35,9 +35,11 @@ test-http:
 	sh scripts/http_protocol_edge_cases.sh
 	sh scripts/http_timeout_test.sh
 
-test-rwlock:
-	sh scripts/rwlock_stress_test.sh
+test-concurrency:
+	sh scripts/bucket_lock_stress_test.sh
 
-test: test-unit test-http test-rwlock
+test-rwlock: test-concurrency
 
-.PHONY: all clean test-unit test-http test-rwlock test
+test: test-unit test-http test-concurrency
+
+.PHONY: all clean test-unit test-http test-concurrency test-rwlock test
