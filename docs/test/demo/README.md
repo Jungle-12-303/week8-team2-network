@@ -29,15 +29,15 @@
 
 ### 기본 검증
 
-| 순서 | 실행 명령 | 주로 확인하는 내용 |
-| --- | --- | --- |
-| 1 | `sh scripts/tests/sql/unit-tests.sh` | SQL 내부 로직, 파서, 결과 구조 |
-| 2 | `sh scripts/tests/http/smoke-test.sh 8080` | INSERT / SELECT 기본 응답 |
-| 3 | `sh scripts/tests/http/integration-test.sh` | HTTP 통합 동작과 상태 코드 |
-| 4 | `sh scripts/tests/http/protocol-edge-cases.sh` | 요청 형식 경계값 |
-| 5 | `sh scripts/tests/http/timeout-test.sh` | 느린 요청의 타임아웃 처리 |
-| 6 | `sh scripts/tests/concurrency/bucket-lock-stress-test.sh` | 버킷 락 동시성 및 종료 처리 |
-| 7 | `sh scripts/tests/http/manual-query.sh 8080` | 사람이 직접 SQL 결과를 확인 |
+| 순서 | 실행 명령 | 주로 확인하는 내용 | 실행 결과 |
+| --- | --- | --- | --- |
+| 1 | `sh scripts/tests/sql/unit-tests.sh` | SQL 내부 로직, 파서, 결과 구조 | PASS |
+| 2 | `sh scripts/tests/http/smoke-test.sh 8080` | INSERT / SELECT 기본 응답 | PASS |
+| 3 | `sh scripts/tests/http/integration-test.sh` | HTTP 통합 동작과 상태 코드 | PASS |
+| 4 | `sh scripts/tests/http/protocol-edge-cases.sh` | 요청 형식 경계값 | PASS |
+| 5 | `sh scripts/tests/http/timeout-test.sh` | 느린 요청의 타임아웃 처리 | PASS |
+| 6 | `sh scripts/tests/concurrency/bucket-lock-stress-test.sh` | 버킷 락 동시성 및 종료 처리 | FAIL - 2분 내 종료하지 않아 timeout |
+| 7 | `sh scripts/tests/http/manual-query.sh 8080` | 사람이 직접 SQL 결과를 확인 | PASS |
 
 ### 서버 부하 / 운영 검증
 
