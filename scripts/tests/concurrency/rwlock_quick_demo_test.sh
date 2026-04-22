@@ -2,15 +2,9 @@
 set -eu
 
 PORT="${1:-18081}"
-SERVER_LOG="${2:-/tmp/rwlock_quick_demo_server.log}"
 TMP_DIR="${TMPDIR:-/tmp}/rwlock_quick_demo.$$"
-SERVER_PID=""
 
 cleanup() {
-    if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
-        kill "$SERVER_PID" 2>/dev/null || true
-        wait "$SERVER_PID" 2>/dev/null || true
-    fi
     rm -rf "$TMP_DIR"
 }
 
@@ -28,43 +22,20 @@ assert_ok() {
 }
 
 wait_for_server() {
-    tries=0
-    while [ "$tries" -lt 50 ]; do
-        if curl -sS -X POST "http://localhost:${PORT}/query" \
-            -H "Content-Type: text/plain" \
-            --data-raw "SELECT * FROM users;" >/dev/null 2>&1; then
-            return 0
-        fi
-        tries=$((tries + 1))
-        sleep 0.1
-    done
-
-    fail "Server did not become ready on port ${PORT}"
-}
-
-make_binary() {
-    if [ ! -x ./db_server ]; then
-        make db_server
+    if curl -sS -X POST "http://localhost:${PORT}/query" \
+        -H "Content-Type: text/plain" \
+        --data-raw "SELECT * FROM users;" >/dev/null 2>&1; then
+        return 0
     fi
-}
 
-launch_server() {
-    make_binary
-    ./db_server "$PORT" >"$SERVER_LOG" 2>&1 &
-    SERVER_PID=$!
+    fail "Server is not ready on port ${PORT}"
 }
 
 trap cleanup EXIT INT TERM
 
 mkdir -p "$TMP_DIR"
 
-launch_server
 wait_for_server
-
-seed_response="$(curl -sS -X POST "http://localhost:${PORT}/query" \
-    -H "Content-Type: text/plain" \
-    --data-raw "INSERT INTO users VALUES ('Seed', 0);")"
-assert_ok "$seed_response"
 
 for i in 1 2; do
     select_file="$TMP_DIR/select-$i.txt"

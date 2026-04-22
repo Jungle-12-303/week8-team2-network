@@ -54,8 +54,8 @@ EOF
 printf '\n==========================================\n'
 printf '[2/3] RW lock concurrency smoke test\n'
 printf '==========================================\n'
-printf 'This stage is a short concurrency confirmation and usually finishes within a few seconds.\n'
-sh scripts/tests/concurrency/rwlock_quick_demo_test.sh 18081
+printf 'This stage reuses the server from step 1 and usually finishes within a few seconds.\n'
+sh scripts/tests/concurrency/rwlock_quick_demo_test.sh "$PORT"
 
 if [ "${DEMO_INCLUDE_LONG_CONCURRENCY:-0}" = "1" ]; then
     printf '\n[optional] Long concurrency stress test (slow, appendix only)\n'
