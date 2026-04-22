@@ -5,3 +5,8 @@ services:
     ports:
       - "8080:8080"
     command: ["8080"]
+  demo:
+    build:
+      context: .
+      dockerfile: Dockerfile.demo
+    working_dir: /app

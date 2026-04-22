@@ -90,3 +90,6 @@
 - `scripts/tests/` 아래 문서는 개별 검증 기준이다.
 - 루트의 `scripts/*.sh` 파일은 이전 실행 방식과의 호환성, 혹은 데모 목적의 진입점이다.
 - 새로운 테스트가 추가되면 먼저 `scripts/` 또는 `scripts/tests/`에 실행 스크립트를 넣고, 그다음 `docs/test/demo/tests/` 또는 `docs/test/*/README.md`에 안내 문서를 붙인다.
+## Demo Scenario
+
+- [demo-scenario.md](demo-scenario.md)

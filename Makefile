@@ -40,6 +40,9 @@ test-concurrency:
 
 test-rwlock: test-concurrency
 
+demo:
+	sh scripts/demo/demo_scenario.sh
+
 test: test-unit test-http test-concurrency
 
-.PHONY: all clean test-unit test-http test-concurrency test-rwlock test
+.PHONY: all clean test-unit test-http test-concurrency test-rwlock demo test

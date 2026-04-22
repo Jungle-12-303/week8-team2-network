@@ -4,64 +4,37 @@ set -eu
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 REPO_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)"
 
-PORT="${1:-18080}"
-SERVER_PID=""
-SERVER_LOG="${TMPDIR:-/tmp}/demo_scenario_server_$$.log"
+cd "$REPO_ROOT"
+export DOCKER_CONFIG="$REPO_ROOT/.docker"
+mkdir -p "$DOCKER_CONFIG"
 
-cleanup() {
-    if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
-        kill "$SERVER_PID" 2>/dev/null || true
-        wait "$SERVER_PID" 2>/dev/null || true
+if ! docker compose version >/dev/null 2>&1; then
+    if ! docker-compose version >/dev/null 2>&1; then
+        printf '%s\n' 'Docker Compose is required to run this demo.' >&2
+        exit 1
     fi
-    rm -f "$SERVER_LOG"
-}
+fi
 
-wait_for_server() {
+if ! docker info >/dev/null 2>&1; then
+    docker desktop start >/dev/null 2>&1 || true
     tries=0
     while [ "$tries" -lt 60 ]; do
-        if curl -sS -X POST "http://localhost:${PORT}/query" \
-            -H "Content-Type: text/plain" \
-            --data-raw "SELECT * FROM users;" >/dev/null 2>&1; then
-            return 0
+        if docker info >/dev/null 2>&1; then
+            break
         fi
         tries=$((tries + 1))
-        sleep 0.1
+        sleep 2
     done
-    return 1
-}
+fi
 
-trap cleanup EXIT INT TERM
-
-cd "$REPO_ROOT"
-
-printf '==========================================\n'
-printf '[1/3] Internal DB engine and API server link\n'
-printf '==========================================\n'
-
-make db_server >/dev/null
-./db_server "$PORT" 4 16 32 >"$SERVER_LOG" 2>&1 &
-SERVER_PID=$!
-
-wait_for_server || {
-    printf 'Failed to start server on port %s\n' "$PORT" >&2
+if ! docker info >/dev/null 2>&1; then
+    printf '%s\n' 'Docker Desktop or the Docker engine must be running.' >&2
     exit 1
-}
+fi
 
-sh scripts/tests/http/manual-query.sh "$PORT" <<'EOF'
-INSERT INTO users VALUES ('Alice', 20);
-SELECT * FROM users WHERE id = 1;
-EOF
+COMPOSE_CMD="docker compose"
+if ! docker compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="docker-compose"
+fi
 
-printf '\n==========================================\n'
-printf '[2/3] Multithread concurrency issue\n'
-printf '==========================================\n'
-sh scripts/rwlock_stress_test.sh
-
-printf '\n==========================================\n'
-printf '[3/3] API server architecture\n'
-printf '==========================================\n'
-sh scripts/multi_client_demo.sh
-
-printf '\n==========================================\n'
-printf 'Demo finished successfully\n'
-printf '==========================================\n'
+exec $COMPOSE_CMD run --rm --build demo sh scripts/demo/demo_scenario_inner.sh "$@"
