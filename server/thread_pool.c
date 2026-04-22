@@ -1,8 +1,23 @@
 #include "thread_pool.h"
 
 #include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+
+static int queue_debug_enabled(void) {
+    static int checked = 0;
+    static int enabled = 0;
+    if (!checked) {
+        const char *val = getenv("DEBUG_QUEUE");
+        enabled = (val != NULL && strcmp(val, "1") == 0);
+        checked = 1;
+    }
+    return enabled;
+}
+
+#define QUEUE_LOG(...) do { if (queue_debug_enabled()) { fprintf(stderr, "[QUEUE] " __VA_ARGS__); fflush(stderr); } } while (0)
 
 static void *thread_pool_worker_main(void *arg) {
     ThreadPool *pool = (ThreadPool *)arg;
@@ -23,11 +38,15 @@ static void *thread_pool_worker_main(void *arg) {
         client_fd = pool->jobs[pool->head].client_fd;
         pool->head = (pool->head + 1) % pool->queue_capacity;
         pool->size--;
+        QUEUE_LOG("dequeue  fd=%-4d size=%zu/%zu  worker=%lu\n",
+                  client_fd, pool->size, pool->queue_capacity,
+                  (unsigned long)pthread_self() % 10000);
         pthread_mutex_unlock(&pool->mutex);
 
         if (pool->handler != NULL) {
             pool->handler(pool->context, client_fd);
         }
+        QUEUE_LOG("done     fd=%-4d (closed)\n", client_fd);
         close(client_fd);
     }
 
@@ -103,6 +122,9 @@ int thread_pool_submit(ThreadPool *pool, int client_fd) {
         pool->tail = (pool->tail + 1) % pool->queue_capacity;
         pool->size++;
         accepted = 1;
+        QUEUE_LOG("submit   fd=%-4d size=%zu/%zu  head=%zu tail=%zu\n",
+                  client_fd, pool->size, pool->queue_capacity,
+                  pool->head, pool->tail);
         pthread_cond_signal(&pool->cond);
     }
     pthread_mutex_unlock(&pool->mutex);
