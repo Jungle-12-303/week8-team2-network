@@ -57,9 +57,13 @@ client_request() {
     local status="0"
 
     exec {fd}<>"/dev/tcp/127.0.0.1/$PORT"
-    printf 'POST /query HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n' "${#sql}" >&"${fd}"
+    if ! printf 'POST /query HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n' "${#sql}" >&"${fd}"; then
+        printf '503 큐 포화\n' >"$output_file"
+        exec {fd}>&-
+        return 0
+    fi
 
-    if IFS= read -r -t 0.3 -u "${fd}" probe; then
+    if IFS= read -r -t 1.5 -u "${fd}" probe; then
         if [[ "$probe" == *"503"* ]]; then
             printf '503 큐 포화\n' >"$output_file"
             exec {fd}>&-
