@@ -125,9 +125,8 @@ HTTP 요청
 - C 기반 HTTP API 서버 구현
 - 기존 SQL Processor 재사용
 - Thread Pool로 동시 요청 처리
-- `id` 기반 B+Tree 인덱스 활용
 - SQL 실행 결과를 JSON으로 반환
-- Docker 기반 실행 환경 제공
+
 
 ### 2-2. 학습 목표
 
@@ -422,7 +421,7 @@ typedef struct ServerConfig {
 } ServerConfig;
 ```
 
-이 구조가 필요한 이유는 포트, worker 수, queue 크기, backlog처럼 서버 실행 조건을 한 곳에서 관리하기 위해서입니다.
+포트, worker 수, queue 크기, backlog처럼 서버 실행 조건을 한구조체에서 관리합니다.
 
 ### 6-2. HttpRequest
 
@@ -470,19 +469,6 @@ flowchart TD
     E --> G["thread_pool_init()"]
     E --> H["socket/bind/listen"]
     H --> I["server_run()"]
-```
-
-### 7-2. 클라이언트 요청 처리 흐름
-
-```text
-client connect
- -> accept()
- -> thread_pool_submit(client_fd)
- -> worker가 client_fd 처리
- -> HTTP request parse
- -> SQL 실행
- -> HTTP response 전송
- -> close(client_fd)
 ```
 
 ### 7-3. POST /query 처리 흐름
@@ -534,7 +520,7 @@ sequenceDiagram
         SQL-->>API: SELECT 결과
     end
 
-    API-->>Worker: JSON 생성
+    API-->>Worker: JSON body 반환 
     Worker-->>Client: HTTP Response
 
 ```
@@ -544,7 +530,7 @@ sequenceDiagram
 
 ### 8-1. Thread Pool 구조
 
-Thread Pool은 고정된 수의 worker thread를 미리 만들어두고, main thread가 받은 client fd를 queue에 넣는 구조입니다.
+고정된 수의 worker thread를 미리 만들어두고, main thread가 받은 client fd를 queue에 넣는 구조입니다.
 
 ```mermaid
 flowchart LR
@@ -554,8 +540,6 @@ flowchart LR
     B --> E["Worker 3"]
     B --> F["Worker 4"]
 ```
-
-왜 이 구조인가:
 
 요청마다 스레드를 만들면 요청 수가 곧 스레드 수가 됩니다. Thread Pool은 최대 동시 실행 수를 제한해서 서버가 과도한 요청에 무너지지 않도록 합니다.
 
@@ -588,7 +572,7 @@ sequenceDiagram
     participant M as mutex + cond
     participant C as Consumer<br/>(worker thread)
 
-    Note over C,M: 서버 시작 시 worker가 먼저 대기 상태로 진입
+    Note over C,M:  서버 시작 시 worker가 먼저 대기 상태로 진입
     C->>M: pthread_mutex_lock
     C->>M: pthread_cond_wait<br/>(= mutex 해제 + 슬립, 원자적)
     Note over C,M: mutex를 풀면서 잠든다<br/>깨어나면 mutex를 다시 잡는다
