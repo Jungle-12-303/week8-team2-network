@@ -46,13 +46,15 @@ flowchart LR
 
     subgraph EXT["외부"]
         A
-    end
+    end
 
-    subgraph HTTP["HTTP 계층"]
-        B["server.c<br/>HTTP 서버"]
-    end
+    subgraph HTTP["HTTP 계층"]
+        B["server.c<br/>accept loop"]
+        H["thread_pool.c<br/>Job Queue"]
+        I["Worker Threads<br/>HTTP 파싱 / 응답 전송"]
+    end
 
-    subgraph APP["애플리케이션 계층"]
+    subgraph APP["애플리케이션 계층"]
         C["api.c<br/>API 어댑터"]
         D["sql.c<br/>SQL 처리기"]
         G["json_util.c<br/>JSON 응답 생성"]
@@ -61,10 +63,12 @@ flowchart LR
     subgraph DATA["데이터 계층"]
         E["table.c<br/>테이블"]
         F["bptree.c<br/>B+Tree 인덱스"]
-    end
+    end
 
     A -->|POST /query 요청| B
-    B -->|요청 본문 전달| C
+    B -->|client fd enqueue| H
+    H -->|dequeue| I
+    I -->|HTTP request 파싱 후 SQL 전달| C
     C -->|SQL 문자열 전달| D
     D -->|실행 요청| E
     E -->|인덱스 조회| F
@@ -72,7 +76,8 @@ flowchart LR
     E -->|레코드 결과 반환| D
     D -->|실행 결과 반환| C
     C -->|JSON 직렬화| G
-    G -->|HTTP 응답 반환| A
+    G -->|JSON body 반환| I
+    I -->|HTTP 응답 반환| A
 
 ```
 
