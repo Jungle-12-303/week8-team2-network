@@ -670,6 +670,47 @@ flowchart TD
 
 그래서 현재 실험 결과 기준으로는 `4`가 처리량과 안정성을 가장 균형 있게 만족하는 값입니다.
 
+### 10-2. DB lock 범위를 왜 줄였는가
+
+초기 구현에서는 DB lock을 너무 넓게 잡고 있었습니다. 요청을 파싱하기 전부터 lock을 잡고, SQL 실행과 JSON 응답 생성, 결과 반환 직전까지 lock을 유지하는 방식이었습니다.
+
+이 구조는 안전하기는 하지만, worker thread를 여러 개 두는 의미가 크게 줄어듭니다. 한 worker가 DB lock을 잡고 있는 동안 다른 worker들은 요청을 받아도 DB 작업에 들어가지 못하고 기다려야 하기 때문입니다. 특히 SQL 파싱, 에러 응답 생성, HTTP 응답 전송처럼 실제 Table을 수정하거나 읽지 않는 작업까지 같은 lock 안에 들어가면 멀티스레드 병렬성을 확보하기 어렵습니다.
+
+그래서 첫 번째로 lock 범위를 **DB 접근 구간**으로 줄였습니다. 현재 `api_handle_query()`는 먼저 SQL을 파싱하고, 파싱된 command를 `sql_execute_plan()`으로 넘깁니다. 그리고 실제 공유 데이터인 `Table`을 읽거나 쓰는 보호는 `sql_processor/table.c` 내부에서 처리합니다.
+
+#### 개선 과정
+
+| 단계 | 방식 | 문제 / 개선점 |
+|---:|---|---|
+| 1 | 요청 처리 전체를 하나의 lock으로 보호 | 파싱, SQL 실행, 응답 생성이 모두 직렬화됨 |
+| 2 | 실제 DB 접근 구간만 lock으로 보호 | 불필요한 대기 시간은 줄었지만, 하나의 Table lock이면 write 요청이 오래 기다릴 수 있음 |
+| 3 | hash bucket 단위로 lock 분리 | 서로 다른 bucket을 사용하는 요청은 더 작은 범위에서 충돌함 |
+
+#### 현재 구조
+
+현재 `Table`은 전체 테이블 하나에 lock을 두는 대신, `TABLE_BUCKET_COUNT = 16`개의 bucket으로 나누고 각 bucket마다 `pthread_rwlock_t`를 가집니다.
+
+```text
+INSERT
+ -> next_id mutex로 id 발급
+ -> id % TABLE_BUCKET_COUNT 로 bucket 선택
+ -> 해당 bucket write lock
+ -> rows + B+Tree 갱신
+ -> unlock
+
+SELECT by id
+ -> id % TABLE_BUCKET_COUNT 로 bucket 선택
+ -> 해당 bucket read lock
+ -> bucket-local B+Tree 조회
+ -> unlock
+```
+
+이렇게 한 이유는 write 요청이 들어왔을 때 모든 read 요청과 무조건 충돌하지 않게 하기 위해서입니다. 예를 들어 한 요청이 `bucket[3]`에 insert 중이어도, 다른 요청이 `bucket[7]`의 id를 조회한다면 서로 다른 lock을 사용하므로 동시에 진행될 수 있습니다.
+
+물론 이 방식도 완전한 해결책은 아닙니다. `SELECT *`, `name`, `age`, `id range` 조건처럼 여러 bucket을 순회해야 하는 요청은 여전히 여러 bucket lock을 차례로 잡아야 합니다. 또한 `pthread_rwlock_t`의 reader/writer 공정성 정책까지 직접 제어하는 구조는 아닙니다.
+
+그래도 현재 서버 규모에서는 전체 요청을 하나의 lock으로 묶는 것보다, **파싱과 응답 생성은 lock 밖에서 처리하고 실제 Table 접근만 bucket 단위로 보호하는 방식**이 처리량과 안정성의 균형이 더 좋다고 판단했습니다.
+
 
 ---
 
