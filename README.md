@@ -415,9 +415,9 @@ SELECT * FROM users WHERE age <= 20;
 ```c
 typedef struct ServerConfig {
     unsigned short port;
-    size_t worker_count;
-    size_t queue_capacity;
-    int backlog;
+    size_t worker_count;  //4
+    size_t queue_capacity;  //16
+    int backlog;  //32
 } ServerConfig;
 ```
 
